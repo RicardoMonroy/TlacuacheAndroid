@@ -28,7 +28,7 @@ TlacuacheAndroid/
 │       │       ├── MainActivity.kt      # una actividad por ventana; edge-to-edge
 │       │       ├── core/                # CoreBridge: envoltorios Kotlin sobre los bindings generados
 │       │       ├── storage/
-│       │       │   ├── Permissions.kt   # acceso a archivos según API
+│       │       │   ├── StorageAccess.kt # acceso a archivos según API
 │       │       │   ├── Volumes.kt       # StorageManager + StatFs + avisos de montaje
 │       │       │   ├── Places.kt        # carpetas estándar
 │       │       │   ├── Listing.kt       # lectura de carpetas en IO, por lotes

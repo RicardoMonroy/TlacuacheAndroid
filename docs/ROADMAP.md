@@ -13,6 +13,7 @@ Trabajar en orden. Cada tarea = un commit. Marcar `[x]` al cumplir el criterio d
 
 ## Hito A1 — Un panel que navega
 - [ ] **A1.1 Permisos**: pantalla de bienvenida, `MANAGE_EXTERNAL_STORAGE` (30+) y almacenamiento heredado (29); volver a ella si se revoca. CA: probado en **T**, **P** y **E10**, incluido revocar desde Ajustes.
+  - Avance (2026-10-27): **P** (conceder en Ajustes, volver, revocar → bienvenida) y **E10** (denegar, permitir, Abrir Ajustes, revocar) correctos. Falta **T**. En E10, tras conceder fuera de la app (`pm grant`) la primera lectura de la raíz devolvió `null`: A1.3 debe releer al volver a primer plano y mostrar error recuperable, no lista vacía.
 - [ ] **A1.2 FFI de listado**: registros `FileEntry`/`Age`, `arrange()` y `age()` con pruebas en la crate. CA: `arrange` ordena 10 000 entradas en una llamada (prueba con tiempo medido).
 - [ ] **A1.3 Lista detallada**: `Listing` por lotes en IO + `arrange` + `LazyColumn` con `key` = nombre; columnas según ancho; chip de edad. CA: abre una carpeta de 10 000 archivos en **T** sin congelar la UI (generar con `adb shell`).
 - [ ] **A1.4 Navegación**: tocar/Enter entra, ↑/Backspace sube, historial con `PathHistory`, gesto atrás según UI_SPEC §3. CA: prueba JVM del orden del gesto atrás + prueba manual en **P**.

@@ -2,4 +2,16 @@
 <resources>
     <string name="app_name">Tlacuache</string>
     <string name="placeholder_greeting">Tlacuache para Android</string>
+    <plurals name="placeholder_root_entries">
+        <item quantity="one">%d elemento en el almacenamiento interno</item>
+        <item quantity="other">%d elementos en el almacenamiento interno</item>
+    </plurals>
+
+    <!-- Bienvenida y permisos (UI_SPEC §10) -->
+    <string name="welcome_title">Tus archivos, a la mano</string>
+    <string name="welcome_body">Para mostrar y organizar tus fotos, videos, descargas y documentos, Tlacuache necesita acceso a los archivos de tu dispositivo. Nada sale de tu dispositivo: sin anuncios ni rastreadores.</string>
+    <string name="welcome_grant_all_files">Permitir acceso a los archivos</string>
+    <string name="welcome_grant_storage">Permitir acceso al almacenamiento</string>
+    <string name="welcome_denied">Sin este permiso Tlacuache no puede mostrar tus carpetas. Puedes activarlo en Ajustes.</string>
+    <string name="welcome_open_settings">Abrir Ajustes</string>
 </resources>
