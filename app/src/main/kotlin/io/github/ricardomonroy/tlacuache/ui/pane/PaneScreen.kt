@@ -17,6 +17,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -43,9 +46,11 @@ import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isAltPressed
 import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.isMetaPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.input.key.utf16CodePoint
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.pluralStringResource
@@ -59,6 +64,7 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.ricardomonroy.tlacuache.R
 import io.github.ricardomonroy.tlacuache.ffi.FileEntry
+import io.github.ricardomonroy.tlacuache.ffi.FilterKey
 import io.github.ricardomonroy.tlacuache.intents.FileIntents
 import io.github.ricardomonroy.tlacuache.state.BackStep
 import io.github.ricardomonroy.tlacuache.state.PathInput
@@ -85,6 +91,9 @@ fun PaneScreen(
     }
 
     var editingPath by rememberSaveable { mutableStateOf(false) }
+    // Campo del filtro abierto con el botón de buscar (táctil); con teclado físico basta con escribir.
+    var filterOpen by rememberSaveable { mutableStateOf(false) }
+    var moreMenu by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -115,19 +124,32 @@ fun PaneScreen(
             }
         if (!started) scope.launch { snackbar.showSnackbar(noApp) }
     }
-    // Gesto atrás y Esc (UI_SPEC §3): la ruta en edición cuenta como menú abierto. Filtro y selección llegan en A1.7 y A3.4.
+    // Gesto atrás y Esc (UI_SPEC §3): la ruta en edición o el campo de filtro vacío cuentan como menú abierto.
+    // La selección llega en A3.4.
     val backStep =
         BackStep.of(
-            menuOpen = editingPath,
-            filterActive = false,
+            menuOpen = editingPath || (filterOpen && ui.query.isEmpty()),
+            filterActive = ui.query.isNotEmpty(),
             selectionActive = false,
             canGoBack = ui.canGoBack,
         )
     BackHandler(enabled = backStep != BackStep.EXIT) {
         when (backStep) {
-            BackStep.CLOSE_MENU -> editingPath = false
-            BackStep.HISTORY_BACK -> tab.back()
-            else -> Unit
+            BackStep.CLOSE_MENU -> {
+                editingPath = false
+                filterOpen = false
+            }
+
+            BackStep.CLEAR_FILTER -> {
+                tab.setQuery("")
+                filterOpen = false
+            }
+
+            BackStep.HISTORY_BACK -> {
+                tab.back()
+            }
+
+            else -> {}
         }
     }
     // El panel recibe el foco para que los atajos funcionen sin tocar nada antes.
@@ -156,6 +178,16 @@ fun PaneScreen(
 
                     event.isCtrlPressed && event.key == Key.L -> {
                         editingPath = true
+                        true
+                    }
+
+                    event.isCtrlPressed && event.key == Key.H -> {
+                        tab.toggleHidden()
+                        true
+                    }
+
+                    // Escribir filtra; Backspace, Espacio y Esc editan el filtro solo si tiene texto (ADR-006).
+                    filterKey(event)?.let(tab::applyFilterKey) == true -> {
                         true
                     }
 
@@ -192,6 +224,23 @@ fun PaneScreen(
                     )
                 }
             }
+            val filterLabel = stringResource(R.string.filter_open)
+            IconButton({ filterOpen = true }, Modifier.semantics { contentDescription = filterLabel }) {
+                SearchGlyph(t.colors.headerFg.color)
+            }
+            Box {
+                NavButton("⋮", R.string.menu_more, enabled = true) { moreMenu = true }
+                DropdownMenu(expanded = moreMenu, onDismissRequest = { moreMenu = false }) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.menu_show_hidden)) },
+                        trailingIcon = { Checkbox(checked = ui.showHidden, onCheckedChange = null) },
+                        onClick = {
+                            moreMenu = false
+                            tab.toggleHidden()
+                        },
+                    )
+                }
+            }
         }
         Box(Modifier.fillMaxSize()) {
             when {
@@ -200,7 +249,10 @@ fun PaneScreen(
                 }
 
                 !ui.loading && ui.visible.isEmpty() -> {
-                    Message(stringResource(R.string.pane_empty), null)
+                    Message(
+                        stringResource(if (ui.query.isEmpty()) R.string.pane_empty else R.string.filter_no_matches),
+                        null,
+                    )
                 }
 
                 else -> {
@@ -220,10 +272,48 @@ fun PaneScreen(
             if (ui.loading) {
                 LinearProgressIndicator(Modifier.fillMaxWidth().align(Alignment.TopCenter))
             }
+            if (ui.query.isNotEmpty() || filterOpen) {
+                QuickFilter(
+                    query = ui.query,
+                    matches = ui.visible.size,
+                    editable = filterOpen,
+                    onQueryChange = tab::setQuery,
+                    onClose = {
+                        tab.setQuery("")
+                        filterOpen = false
+                    },
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomCenter)
+                            .windowInsetsPadding(WindowInsets.navigationBars)
+                            .padding(bottom = 16.dp),
+                )
+            }
             SnackbarHost(
                 snackbar,
                 Modifier.align(Alignment.BottomCenter).windowInsetsPadding(WindowInsets.navigationBars),
             )
+        }
+    }
+}
+
+/** Tecla del filtro rápido, o `null` si lleva Ctrl, Alt o Meta (es un atajo) o no escribe nada. */
+private fun filterKey(event: KeyEvent): FilterKey? {
+    if (event.isCtrlPressed || event.isAltPressed || event.isMetaPressed) return null
+    return when (event.key) {
+        Key.Backspace -> {
+            FilterKey.Backspace
+        }
+
+        Key.Escape -> {
+            FilterKey.Escape
+        }
+
+        else -> {
+            event.utf16CodePoint
+                .takeIf {
+                    it > 0 && !Character.isISOControl(it)
+                }?.let { FilterKey.Char(String(Character.toChars(it))) }
         }
     }
 }

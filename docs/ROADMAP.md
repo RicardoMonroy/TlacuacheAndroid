@@ -23,6 +23,7 @@ Trabajar en orden. Cada tarea = un commit. Marcar `[x]` al cumplir el criterio d
 - [ ] **A1.6 Abrir archivos**: `FileProvider`, Abrir, Abrir con…, Compartir. CA: abre una foto, un PDF y un video con sus apps en **T**.
   - Avance (2026-10-27): en **P**, foto → Fotos (vía el selector «Solo una vez» del sistema: no hay app predeterminada para imágenes), video → Fotos, PDF → visor de Drive, extensión desconocida → selector de apps; pulsación larga → Abrir con… y Compartir (con vista previa, el permiso de lectura llega). Falta **T**. El menú de pulsación larga es provisional hasta A3.4/A3.11.
 - [ ] **A1.7 Filtro rápido y ocultos**: escribir con teclado físico, botón de buscar en táctil, Esc limpia, Ctrl+H; `Android/` oculta (ADR-A06). CA: `cancion` encuentra `Canción` en **PE**.
+  - Avance (2026-10-27): en **P** con teclas simuladas: `cancion` filtra «Canción.mp3» y «cancion vieja.txt», Backspace/Esp/Esc según ADR-006, Ctrl+H y menú ⋮ alternan ocultos, `Android/` no aparece ni con ocultos; táctil: lupa abre el campo, teclado en pantalla filtra, atrás oculta teclado y luego limpia. Falta **PE**. Pendiente para A2.2: con lupa y ⋮ la ruta se corta por la izquierda en teléfono.
 - [ ] **A1.8 Resincronización**: `FolderWatcher` con debounce, relectura al volver a primer plano, Ctrl+R. Verificar si llegan eventos de cambios hechos por otra app en interno, SD y USB; si no, revisión periódica. CA: una foto tomada con la cámara aparece sola en `DCIM/Camera`; conclusión anotada en ADR-A10.
 
 ## Hito A2 — Pestañas, doble panel, layouts y barra lateral

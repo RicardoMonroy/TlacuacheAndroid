@@ -38,4 +38,15 @@
     <string name="action_open_with">Abrir con…</string>
     <string name="action_share">Compartir</string>
     <string name="open_no_app">No hay una app para abrir este archivo.</string>
+
+    <!-- Filtro rápido y ocultos (A1.7) -->
+    <string name="filter_open">Filtrar esta carpeta</string>
+    <string name="filter_clear">Quitar filtro</string>
+    <string name="filter_no_matches">Nada coincide con el filtro.</string>
+    <plurals name="filter_matches">
+        <item quantity="one">%d coincidencia</item>
+        <item quantity="other">%d coincidencias</item>
+    </plurals>
+    <string name="menu_more">Más opciones</string>
+    <string name="menu_show_hidden">Mostrar ocultos</string>
 </resources>

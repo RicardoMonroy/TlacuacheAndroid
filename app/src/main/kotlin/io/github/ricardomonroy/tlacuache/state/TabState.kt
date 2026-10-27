@@ -1,9 +1,11 @@
 package io.github.ricardomonroy.tlacuache.state
 
 import io.github.ricardomonroy.tlacuache.ffi.FileEntry
+import io.github.ricardomonroy.tlacuache.ffi.FilterKey
 import io.github.ricardomonroy.tlacuache.ffi.PathHistory
 import io.github.ricardomonroy.tlacuache.ffi.SortKey
 import io.github.ricardomonroy.tlacuache.ffi.SortSpec
+import io.github.ricardomonroy.tlacuache.ffi.applyFilterKey
 import io.github.ricardomonroy.tlacuache.ffi.arrange
 import io.github.ricardomonroy.tlacuache.storage.Listing
 import kotlinx.coroutines.CoroutineScope
@@ -43,15 +45,21 @@ class TabState(
         val crumbs: List<File> = listOf(dir),
         /** La primera miga es la raíz de un volumen (se rotula con su nombre, no con `0`). */
         val crumbsStartAtVolume: Boolean = false,
+        /** Filtro rápido (UI_SPEC §8); se limpia al cambiar de carpeta. */
+        val query: String = "",
+        /** Ocultos visibles (Ctrl+H); se conserva al navegar. */
+        val showHidden: Boolean = false,
     )
 
-    // shortcut: orden, filtro rápido y ocultos fijos hasta A1.7 (filtro) y A2 (encabezados de orden).
+    // shortcut: orden fijo hasta los encabezados de orden (A2).
     private val sort = SortSpec(SortKey.NAME, descending = false)
-    private val query = ""
-    private val showHidden = false
+
+    /** Todo lo leído de la carpeta, sin filtrar; filtro y ocultos se reaplican sin volver a leer el disco. */
+    private var entries: List<FileEntry> = emptyList()
+    private var arrangeJob: Job? = null
 
     private val history = PathHistory(dir.path)
-    private val _ui = MutableStateFlow(uiFor(dir))
+    private val _ui = MutableStateFlow(uiFor(dir, showHidden = false))
     val ui: StateFlow<Ui> = _ui.asStateFlow()
     private var job: Job? = null
 
@@ -79,6 +87,26 @@ class TabState(
         history.forward()?.let { show(File(it)) }
     }
 
+    fun setQuery(query: String) {
+        _ui.update { it.copy(query = query) }
+        rearrange()
+    }
+
+    /**
+     * Aplica una tecla al filtro rápido con las reglas del core (ADR-006 de Linux). `false` si la
+     * tecla no es del filtro y debe seguir a su acción normal (Backspace sube de nivel).
+     */
+    fun applyFilterKey(key: FilterKey): Boolean {
+        val next = applyFilterKey(_ui.value.query, key) ?: return false
+        setQuery(next)
+        return true
+    }
+
+    fun toggleHidden() {
+        _ui.update { it.copy(showHidden = !it.showHidden) }
+        rearrange()
+    }
+
     /** Va a una carpeta elegida en la barra de ruta (miga o texto ya resuelto). */
     fun goTo(dir: File): GoTo {
         if (volumeRootOf(dir) == null) return GoTo.OUTSIDE_STORAGE
@@ -104,11 +132,15 @@ class TabState(
 
     /** Cambia a [dir] sin rastro de la carpeta anterior y la lee. */
     private fun show(dir: File) {
-        _ui.value = uiFor(dir)
+        entries = emptyList()
+        _ui.value = uiFor(dir, _ui.value.showHidden)
         reload()
     }
 
-    private fun uiFor(dir: File): Ui {
+    private fun uiFor(
+        dir: File,
+        showHidden: Boolean,
+    ): Ui {
         val root = isVolumeRoot(dir)
         return Ui(
             dir = dir,
@@ -118,6 +150,7 @@ class TabState(
             canGoUp = !root && dir.parentFile != null,
             crumbs = crumbsOf(dir),
             crumbsStartAtVolume = volumeRootOf(dir) != null,
+            showHidden = showHidden,
         )
     }
 
@@ -129,12 +162,9 @@ class TabState(
         job =
             scope.launch {
                 try {
-                    Listing.read(dir, isVolumeRoot(dir)).collect { entries ->
-                        val visible =
-                            withContext(Dispatchers.Default) {
-                                arrange(entries, sort, query, showHidden).map { entries[it.toInt()] }
-                            }
-                        _ui.update { it.copy(visible = visible) }
+                    Listing.read(dir, isVolumeRoot(dir)).collect { read ->
+                        entries = read
+                        publish(read)
                     }
                     _ui.update { it.copy(loading = false) }
                 } catch (_: IOException) {
@@ -143,5 +173,27 @@ class TabState(
                     _ui.update { it.copy(visible = emptyList(), loading = false, failed = true) }
                 }
             }
+    }
+
+    /** Reaplica filtro y ocultos a lo ya leído, fuera del hilo principal. */
+    private fun rearrange() {
+        val snapshot = entries
+        arrangeJob?.cancel()
+        arrangeJob = scope.launch { publish(snapshot) }
+    }
+
+    /** Ordena y filtra [read] con el core y lo publica, salvo que ya haya una lectura más nueva. */
+    private suspend fun publish(read: List<FileEntry>) {
+        val ui = _ui.value
+        val visible =
+            withContext(Dispatchers.Default) {
+                arrange(read, sort, ui.query, ui.showHidden).map { read[it.toInt()] }
+            }
+        // Descarta resultados viejos: llegó otra lectura o cambió el filtro mientras se ordenaba.
+        val current = read === entries
+        _ui.update { now ->
+            val sameFilter = now.query == ui.query && now.showHidden == ui.showHidden
+            if (current && sameFilter) now.copy(visible = visible) else now
+        }
     }
 }

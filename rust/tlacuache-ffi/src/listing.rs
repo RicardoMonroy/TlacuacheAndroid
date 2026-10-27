@@ -4,7 +4,7 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use tlacuache_core::age as core_age;
 use tlacuache_core::entry as core_entry;
-use tlacuache_core::filter::Filter;
+use tlacuache_core::filter::{self as core_filter, Filter};
 use tlacuache_core::sort as core_sort;
 
 /// Lo que Kotlin lee de cada entrada de la carpeta.
@@ -12,7 +12,7 @@ use tlacuache_core::sort as core_sort;
 pub struct FileEntry {
     pub name: String,
     pub is_dir: bool,
-    /// Lo decide la app: nombre con `.` y, además, `Android/` (ADR-A06).
+    /// Lo decide la app: nombres con `.` (`Android/` ni se lista, ADR-A06).
     pub is_hidden: bool,
     pub size: u64,
     /// Milisegundos desde 1970; `None` si no se pudo leer.
@@ -116,6 +116,32 @@ pub fn arrange(
     // sort_by es estable, como `SortSpec::sort` en Linux.
     visible.sort_by(|&a, &b| spec.compare(&entries[a as usize], &entries[b as usize]));
     visible
+}
+
+/// Tecla para el filtro rápido (ya sin Ctrl/Alt). `Char` lleva un solo carácter.
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Enum)]
+pub enum FilterKey {
+    Char { text: String },
+    Backspace,
+    Escape,
+}
+
+/// Consulta nueva si la tecla la consume (ADR-006 de Linux), o `None` si debe
+/// seguir a su acción normal (Backspace sube, Espacio alterna la vista previa).
+#[uniffi::export]
+pub fn apply_filter_key(query: String, key: FilterKey) -> Option<String> {
+    let key = match key {
+        FilterKey::Char { text } => {
+            let mut chars = text.chars();
+            match (chars.next(), chars.next()) {
+                (Some(c), None) => core_filter::FilterKey::Char(c),
+                _ => return None,
+            }
+        }
+        FilterKey::Backspace => core_filter::FilterKey::Backspace,
+        FilterKey::Escape => core_filter::FilterKey::Escape,
+    };
+    core_filter::apply_key(&query, key)
 }
 
 /// Edad de `modified_ms` vista desde `now_ms` (columna «Edad»). Se llama por
@@ -228,7 +254,7 @@ mod tests {
             file("foto.jpg"),
             dir("Android"),
         ];
-        // Android/ llega marcada como oculta desde la app.
+        // Aquí solo prueba el filtro de ocultos; la app ni lista `Android/`.
         let mut entries = entries;
         entries[3].is_hidden = true;
         assert_eq!(
@@ -341,6 +367,29 @@ mod tests {
         );
         // Fecha futura (reloj desfasado) = ahora.
         assert_eq!(age(now + H, now).unit, AgeUnit::Now);
+    }
+
+    #[test]
+    fn filter_keys_follow_adr_006() {
+        let ch = |c: &str| FilterKey::Char { text: c.into() };
+        assert_eq!(apply_filter_key("".into(), ch("c")).as_deref(), Some("c"));
+        // Sin filtro, Espacio, Backspace y Esc siguen a su acción normal.
+        assert_eq!(apply_filter_key("".into(), ch(" ")), None);
+        assert_eq!(apply_filter_key("".into(), FilterKey::Backspace), None);
+        assert_eq!(apply_filter_key("".into(), FilterKey::Escape), None);
+        assert_eq!(
+            apply_filter_key("can".into(), ch(" ")).as_deref(),
+            Some("can ")
+        );
+        assert_eq!(
+            apply_filter_key("can".into(), FilterKey::Backspace).as_deref(),
+            Some("ca")
+        );
+        assert_eq!(
+            apply_filter_key("can".into(), FilterKey::Escape).as_deref(),
+            Some("")
+        );
+        assert_eq!(apply_filter_key("".into(), ch("ab")), None);
     }
 
     #[test]

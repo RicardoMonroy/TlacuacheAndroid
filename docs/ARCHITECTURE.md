@@ -116,7 +116,7 @@ Reglas:
 - Cada lote se pasa por `arrange()` del core (una llamada) y se publica la lista ordenada y filtrada.
 - La `LazyColumn`/`LazyVerticalGrid` usa **el nombre como `key`**: releer la carpeta y publicar la lista nueva conserva desplazamiento y selección sin diff explícito.
 - **Resincronización**: `FolderWatcher` (`FileObserver` sobre la carpeta visible) programa una relectura a los 300 ms y junta los eventos que lleguen mientras tanto. También se relee al volver la app a primer plano y con Ctrl+R. Si en algún volumen `FileObserver` no recibe eventos de cambios hechos por otras apps (a verificar en FUSE y USB), se revisa periódicamente mientras la lista está visible, cada 3 a 30 s según lo que tardó la última lectura (mismas reglas que `core::folder_watch` en Linux).
-- Ocultos: nombres que empiezan con `.`. `Android/` se oculta por defecto aunque no empiece con punto (ADR-A06).
+- Ocultos: nombres que empiezan con `.`; se muestran con Ctrl+H. `Android/` en la raíz de un volumen ni siquiera se lista (ADR-A06); con los ocultos visibles tampoco aparece.
 
 ## 7. Operaciones de archivo
 

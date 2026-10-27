@@ -1,6 +1,7 @@
 package io.github.ricardomonroy.tlacuache.state
 
 import io.github.ricardomonroy.tlacuache.ffi.FileEntry
+import io.github.ricardomonroy.tlacuache.ffi.FilterKey
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -80,6 +81,49 @@ class TabStateTest {
         assertEquals(TabState.GoTo.OK, tab.goTo(File(root, "DCIM/Camera")))
         assertEquals(File(root, "DCIM/Camera"), ui.dir)
         assertTrue(ui.canGoBack)
+    }
+
+    /** Espera a que el listado asíncrono cumpla [cond] (lectura en IO, orden en Default). */
+    private fun awaitUi(cond: (TabState.Ui) -> Boolean) {
+        val deadline = System.currentTimeMillis() + 5_000
+        while (!cond(ui)) {
+            check(System.currentTimeMillis() < deadline) { "estado no alcanzado: $ui" }
+            Thread.sleep(10)
+        }
+    }
+
+    private fun names() = ui.visible.map { it.name }
+
+    @Test
+    fun quickFilterAndHiddenReapplyWithoutRereading() {
+        File(root, "Canción.mp3").writeText("x")
+        File(root, "foto.jpg").writeText("x")
+        File(root, ".oculto").writeText("x")
+        tab.reload()
+        awaitUi { !it.loading && names() == listOf("DCIM", "Canción.mp3", "foto.jpg") }
+
+        assertTrue(tab.applyFilterKey(FilterKey.Char("c")))
+        tab.setQuery("cancion")
+        awaitUi { names() == listOf("Canción.mp3") }
+
+        // Con filtro activo, Backspace lo edita en vez de subir de nivel (ADR-006).
+        assertTrue(tab.applyFilterKey(FilterKey.Backspace))
+        assertEquals("cancio", ui.query)
+        assertTrue(tab.applyFilterKey(FilterKey.Escape))
+        assertFalse(tab.applyFilterKey(FilterKey.Backspace))
+        awaitUi { names().size == 3 }
+
+        tab.toggleHidden()
+        awaitUi { ".oculto" in names() }
+    }
+
+    @Test
+    fun navigatingClearsFilterButKeepsHidden() {
+        tab.toggleHidden()
+        tab.setQuery("dc")
+        tab.open(dir("DCIM"))
+        assertEquals("", ui.query)
+        assertTrue(ui.showHidden)
     }
 
     @Test

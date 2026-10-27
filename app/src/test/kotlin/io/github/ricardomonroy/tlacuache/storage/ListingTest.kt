@@ -43,12 +43,24 @@ class ListingTest {
         }
 
     @Test
-    fun androidFolderIsHiddenOnlyAtVolumeRoot() {
-        assertTrue(Listing.isHidden("Android", isDir = true, volumeRoot = true))
-        assertFalse(Listing.isHidden("Android", isDir = true, volumeRoot = false))
-        assertFalse(Listing.isHidden("Android", isDir = false, volumeRoot = true))
-        assertTrue(Listing.isHidden(".nomedia", isDir = false, volumeRoot = false))
-    }
+    fun androidFolderIsExcludedOnlyAtVolumeRootAndDotsAreHidden() =
+        runBlocking {
+            val root = tmp.newFolder("volumen")
+            File(root, "Android/data").mkdirs()
+            File(root, "DCIM/Android").mkdirs()
+            File(root, ".nomedia").writeText("")
+            val atRoot =
+                Listing
+                    .read(root, volumeRoot = true)
+                    .toList()
+                    .last()
+                    .associateBy { it.name }
+            assertEquals(setOf("DCIM", ".nomedia"), atRoot.keys)
+            assertTrue(atRoot.getValue(".nomedia").isHidden)
+            assertFalse(atRoot.getValue("DCIM").isHidden)
+            val inside = Listing.read(File(root, "DCIM"), volumeRoot = false).toList().last()
+            assertEquals(listOf("Android"), inside.map { it.name })
+        }
 
     @Test(expected = IOException::class)
     fun missingFolderFails() {
