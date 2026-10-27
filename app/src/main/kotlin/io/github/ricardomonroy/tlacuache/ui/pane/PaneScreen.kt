@@ -82,12 +82,14 @@ fun PaneScreen(
 ) {
     val ui by tab.ui.collectAsStateWithLifecycle()
     val t = TlacuacheTheme.tokens
-    // La primera reanudación no relee: la pestaña ya leyó al crearse (o sobrevivió a una rotación).
+    // En primer plano se vigila la carpeta y se relee al volver (lo cambiado mientras tanto no generó
+    // eventos). La primera reanudación no relee: la pestaña ya leyó al crearse o sobrevivió a una rotación.
     val resumed = remember { booleanArrayOf(false) }
     LifecycleResumeEffect(tab) {
         if (resumed[0]) tab.reload()
         resumed[0] = true
-        onPauseOrDispose { }
+        tab.startWatching()
+        onPauseOrDispose { tab.stopWatching() }
     }
 
     var editingPath by rememberSaveable { mutableStateOf(false) }
@@ -318,12 +320,13 @@ private fun filterKey(event: KeyEvent): FilterKey? {
     }
 }
 
-/** Backspace y Alt+↑ suben; Alt+← y Alt+→ recorren el historial (UI_SPEC §8). */
+/** Backspace y Alt+↑ suben; Alt+← y Alt+→ recorren el historial; Ctrl+R relee (UI_SPEC §8). */
 private fun handleNavigationKey(
     event: KeyEvent,
     tab: TabState,
 ): Boolean {
     when {
+        event.isCtrlPressed && event.key == Key.R -> tab.reload()
         event.key == Key.Backspace && !event.isAltPressed -> tab.up()
         event.isAltPressed && event.key == Key.DirectionUp -> tab.up()
         event.isAltPressed && event.key == Key.DirectionLeft -> tab.back()

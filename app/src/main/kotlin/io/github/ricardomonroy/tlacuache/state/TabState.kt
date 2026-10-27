@@ -7,13 +7,19 @@ import io.github.ricardomonroy.tlacuache.ffi.SortKey
 import io.github.ricardomonroy.tlacuache.ffi.SortSpec
 import io.github.ricardomonroy.tlacuache.ffi.applyFilterKey
 import io.github.ricardomonroy.tlacuache.ffi.arrange
+import io.github.ricardomonroy.tlacuache.storage.FolderWatch
+import io.github.ricardomonroy.tlacuache.storage.FolderWatcher
 import io.github.ricardomonroy.tlacuache.storage.Listing
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -21,10 +27,12 @@ import java.io.File
 import java.io.IOException
 
 /** Una pestaña: carpeta actual y su listado ordenado y filtrado por el core (ARCHITECTURE §5–§6). */
+@OptIn(FlowPreview::class)
 class TabState(
     private val scope: CoroutineScope,
     dir: File,
     private val isVolumeRoot: (File) -> Boolean,
+    private val watcher: FolderWatcher,
 ) {
     data class Ui(
         val dir: File,
@@ -58,6 +66,11 @@ class TabState(
     private var entries: List<FileEntry> = emptyList()
     private var arrangeJob: Job? = null
 
+    /** Eventos del vigilante (llegan desde otro hilo); se juntan con un debounce de [RESYNC_DELAY_MS]. */
+    private val changes =
+        MutableSharedFlow<Unit>(extraBufferCapacity = 1, onBufferOverflow = BufferOverflow.DROP_OLDEST)
+    private var watch: FolderWatch? = null
+
     private val history = PathHistory(dir.path)
     private val _ui = MutableStateFlow(uiFor(dir, showHidden = false))
     val ui: StateFlow<Ui> = _ui.asStateFlow()
@@ -65,6 +78,21 @@ class TabState(
 
     init {
         reload()
+        scope.launch { changes.debounce(RESYNC_DELAY_MS).collect { reload() } }
+    }
+
+    /**
+     * Vigila la carpeta visible mientras la app está en primer plano (ARCHITECTURE §6): cualquier
+     * cambio, de esta app o de otra, programa una relectura. Se mantiene al navegar.
+     */
+    fun startWatching() {
+        watch?.stop()
+        watch = watcher(_ui.value.dir) { changes.tryEmit(Unit) }
+    }
+
+    fun stopWatching() {
+        watch?.stop()
+        watch = null
     }
 
     /** Entra a [entry] si es carpeta. Abrir archivos llega en A1.6. */
@@ -134,6 +162,7 @@ class TabState(
     private fun show(dir: File) {
         entries = emptyList()
         _ui.value = uiFor(dir, _ui.value.showHidden)
+        if (watch != null) startWatching()
         reload()
     }
 
@@ -154,11 +183,14 @@ class TabState(
         )
     }
 
-    /** Relee la carpeta actual; cancela una lectura en curso. Conserva la lista mientras tanto. */
+    /**
+     * Relee la carpeta actual (Ctrl+R, volver a primer plano, cambios vigilados); cancela una lectura en
+     * curso. Conserva la lista mientras tanto y solo muestra carga si aún no hay nada: no parpadea.
+     */
     fun reload() {
         val dir = _ui.value.dir
         job?.cancel()
-        _ui.update { it.copy(loading = true, failed = false, nowMs = System.currentTimeMillis()) }
+        _ui.update { it.copy(loading = entries.isEmpty(), failed = false, nowMs = System.currentTimeMillis()) }
         job =
             scope.launch {
                 try {
@@ -195,5 +227,10 @@ class TabState(
             val sameFilter = now.query == ui.query && now.showHidden == ui.showHidden
             if (current && sameFilter) now.copy(visible = visible) else now
         }
+    }
+
+    companion object {
+        /** Igual que Linux (ADR-017): junta ráfagas de eventos, como una descarga que crece. */
+        const val RESYNC_DELAY_MS = 300L
     }
 }

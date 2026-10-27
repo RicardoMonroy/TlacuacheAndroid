@@ -4,6 +4,7 @@ import android.os.Environment
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.ricardomonroy.tlacuache.storage.fileObserverWatcher
 import java.io.File
 
 /** Estado de una ventana (ARCHITECTURE §5). Por ahora, una sola pestaña. */
@@ -19,7 +20,10 @@ class WindowViewModel(
             scope = viewModelScope,
             dir = startDir(savedState.get<String>(EXTRA_PATH)),
             isVolumeRoot = { it.absoluteFile == internalRoot },
+            watcher = fileObserverWatcher,
         )
+
+    override fun onCleared() = tab.stopWatching()
 
     /** Barra de ruta: `~` es la raíz del almacenamiento interno. */
     val pathInput = PathInput(internalRoot)

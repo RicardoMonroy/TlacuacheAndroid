@@ -2,6 +2,8 @@ package io.github.ricardomonroy.tlacuache.state
 
 import io.github.ricardomonroy.tlacuache.ffi.FileEntry
 import io.github.ricardomonroy.tlacuache.ffi.FilterKey
+import io.github.ricardomonroy.tlacuache.storage.FolderWatch
+import io.github.ricardomonroy.tlacuache.storage.FolderWatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -23,11 +25,20 @@ class TabStateTest {
     private lateinit var root: File
     private lateinit var tab: TabState
 
+    /** Vigilante falso: recuerda qué carpeta vigila y deja disparar eventos a mano. */
+    private var watched: File? = null
+    private var fire: () -> Unit = {}
+    private val watcher: FolderWatcher = { dir, onChange ->
+        watched = dir
+        fire = onChange
+        FolderWatch { watched = null }
+    }
+
     @Before
     fun setUp() {
         root = tmp.newFolder("volumen")
         File(root, "DCIM/Camera").mkdirs()
-        tab = TabState(scope, root, isVolumeRoot = { it == root })
+        tab = TabState(scope, root, isVolumeRoot = { it == root }, watcher = watcher)
     }
 
     @After
@@ -124,6 +135,31 @@ class TabStateTest {
         tab.open(dir("DCIM"))
         assertEquals("", ui.query)
         assertTrue(ui.showHidden)
+    }
+
+    @Test
+    fun watchedChangesRereadAfterDebounce() {
+        tab.startWatching()
+        assertEquals(root, watched)
+        awaitUi { !it.loading && names() == listOf("DCIM") }
+
+        File(root, "nueva.jpg").writeText("x")
+        // Una ráfaga de eventos (una descarga que crece) se junta en una sola relectura.
+        repeat(5) { fire() }
+        awaitUi { "nueva.jpg" in names() }
+        assertFalse("la relectura no muestra carga si ya hay lista", ui.loading)
+    }
+
+    @Test
+    fun watchFollowsNavigationAndStops() {
+        tab.startWatching()
+        tab.open(dir("DCIM"))
+        assertEquals(File(root, "DCIM"), watched)
+        tab.stopWatching()
+        assertEquals(null, watched)
+        // Sin vigilancia activa, navegar no la vuelve a encender.
+        tab.up()
+        assertEquals(null, watched)
     }
 
     @Test
