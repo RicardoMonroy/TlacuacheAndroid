@@ -1,0 +1,21 @@
+# Gradle / Android
+.gradle/
+build/
+/local.properties
+*.apk
+*.aab
+*.keystore
+*.jks
+.kotlin/
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Rust
+/rust/target/
+**/*.rs.bk
+
+# IDE
+.idea/
+*.iml
+.vscode/
