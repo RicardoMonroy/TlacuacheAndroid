@@ -20,6 +20,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -27,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -43,6 +46,7 @@ import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -54,11 +58,15 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.ricardomonroy.tlacuache.R
+import io.github.ricardomonroy.tlacuache.ffi.FileEntry
+import io.github.ricardomonroy.tlacuache.intents.FileIntents
 import io.github.ricardomonroy.tlacuache.state.BackStep
 import io.github.ricardomonroy.tlacuache.state.PathInput
 import io.github.ricardomonroy.tlacuache.state.TabState
 import io.github.ricardomonroy.tlacuache.ui.theme.TlacuacheTheme
 import io.github.ricardomonroy.tlacuache.ui.theme.color
+import kotlinx.coroutines.launch
+import java.io.File
 
 /** Un panel con su carpeta actual. Relee al volver a primer plano (ARCHITECTURE §6). */
 @Composable
@@ -77,6 +85,36 @@ fun PaneScreen(
     }
 
     var editingPath by rememberSaveable { mutableStateOf(false) }
+    val context = LocalContext.current
+    val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val noApp = stringResource(R.string.open_no_app)
+    val openWithTitle = stringResource(R.string.action_open_with)
+    val shareTitle = stringResource(R.string.action_share)
+    // Carpetas: se entra. Archivos: se abren o comparten con otras apps (A1.6).
+    val act: (FileEntry, FileAction) -> Unit = { entry, action ->
+        val file = File(ui.dir, entry.name)
+        val started =
+            when {
+                entry.isDir -> {
+                    tab.open(entry)
+                    true
+                }
+
+                action == FileAction.OPEN -> {
+                    FileIntents.open(context, file, openWithTitle)
+                }
+
+                action == FileAction.OPEN_WITH -> {
+                    FileIntents.openWith(context, file, openWithTitle)
+                }
+
+                else -> {
+                    FileIntents.share(context, listOf(file), shareTitle)
+                }
+            }
+        if (!started) scope.launch { snackbar.showSnackbar(noApp) }
+    }
     // Gesto atrás y Esc (UI_SPEC §3): la ruta en edición cuenta como menú abierto. Filtro y selección llegan en A1.7 y A3.4.
     val backStep =
         BackStep.of(
@@ -171,7 +209,8 @@ fun PaneScreen(
                         FileList(
                             ui.visible,
                             ui.nowMs,
-                            onOpen = tab::open,
+                            onOpen = { act(it, FileAction.OPEN) },
+                            onAction = act,
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = WindowInsets.navigationBars.asPaddingValues(),
                         )
@@ -181,6 +220,10 @@ fun PaneScreen(
             if (ui.loading) {
                 LinearProgressIndicator(Modifier.fillMaxWidth().align(Alignment.TopCenter))
             }
+            SnackbarHost(
+                snackbar,
+                Modifier.align(Alignment.BottomCenter).windowInsetsPadding(WindowInsets.navigationBars),
+            )
         }
     }
 }

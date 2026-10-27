@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Lo que Tlacuache puede compartir con otras apps (ARCHITECTURE §9): almacenamiento interno y volúmenes. -->
+<paths>
+    <external-path name="interno" path="." />
+    <!-- SD y USB viven en /storage/XXXX-XXXX; FileProvider no tiene etiqueta propia para ellos. -->
+    <root-path name="volumenes" path="storage/" />
+</paths>

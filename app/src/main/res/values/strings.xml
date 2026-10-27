@@ -32,4 +32,10 @@
     <string name="age_days">%dd</string>
     <string name="age_months">%dM</string>
     <string name="age_years">%da</string>
+
+    <!-- Abrir y compartir (A1.6) -->
+    <string name="action_open">Abrir</string>
+    <string name="action_open_with">Abrir con…</string>
+    <string name="action_share">Compartir</string>
+    <string name="open_no_app">No hay una app para abrir este archivo.</string>
 </resources>

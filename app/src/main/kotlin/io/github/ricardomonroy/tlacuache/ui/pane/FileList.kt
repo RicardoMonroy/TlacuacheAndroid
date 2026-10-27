@@ -1,8 +1,9 @@
 package io.github.ricardomonroy.tlacuache.ui.pane
 
 import android.text.format.Formatter
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -17,10 +18,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -41,6 +47,15 @@ import io.github.ricardomonroy.tlacuache.ui.theme.color
 import java.text.DateFormat
 import java.util.Date
 
+/** Acciones sobre un elemento de la lista. */
+enum class FileAction(
+    @StringRes val label: Int,
+) {
+    OPEN(R.string.action_open),
+    OPEN_WITH(R.string.action_open_with),
+    SHARE(R.string.action_share),
+}
+
 // shortcut: filas de 48 dp (táctil); la densidad según el puntero llega en A4.2.
 private val RowHeight = 48.dp
 
@@ -60,6 +75,7 @@ fun FileList(
     entries: List<FileEntry>,
     nowMs: Long,
     onOpen: (FileEntry) -> Unit,
+    onAction: (FileEntry, FileAction) -> Unit,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(),
 ) {
@@ -68,7 +84,14 @@ fun FileList(
         LazyColumn(Modifier.fillMaxSize(), rememberLazyListState(), contentPadding) {
             // El nombre es la identidad: releer la carpeta conserva desplazamiento y selección (ADR-A10).
             itemsIndexed(entries, key = { _, e -> e.name }) { index, entry ->
-                FileRow(entry, nowMs, columns, alt = index % 2 == 1, onOpen = { onOpen(entry) })
+                FileRow(
+                    entry,
+                    nowMs,
+                    columns,
+                    alt = index % 2 == 1,
+                    onOpen = { onOpen(entry) },
+                    onAction = { onAction(entry, it) },
+                )
             }
         }
     }
@@ -81,6 +104,34 @@ private fun FileRow(
     columns: Columns,
     alt: Boolean,
     onOpen: () -> Unit,
+    onAction: (FileAction) -> Unit,
+) {
+    var menu by remember { mutableStateOf(false) }
+    Box {
+        RowContent(entry, nowMs, columns, alt, onOpen, onLongPress = { menu = true })
+        // shortcut: menú mínimo por pulsación larga hasta la selección (A3.4) y el menú contextual completo (A3.11).
+        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+            FileAction.entries.filter { !entry.isDir || it == FileAction.OPEN }.forEach { action ->
+                DropdownMenuItem(
+                    text = { Text(stringResource(action.label)) },
+                    onClick = {
+                        menu = false
+                        onAction(action)
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun RowContent(
+    entry: FileEntry,
+    nowMs: Long,
+    columns: Columns,
+    alt: Boolean,
+    onOpen: () -> Unit,
+    onLongPress: () -> Unit,
 ) {
     val t = TlacuacheTheme.tokens
     val context = LocalContext.current
@@ -90,7 +141,7 @@ private fun FileRow(
             .height(RowHeight)
             .background(if (alt) t.colors.paneAltRow.color else t.colors.paneBg.color)
             // shortcut: un toque o Enter abre; selección y doble clic con ratón llegan en A3.4 y A4.2.
-            .clickable(onClick = onOpen)
+            .combinedClickable(onClick = onOpen, onLongClick = onLongPress)
             .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
