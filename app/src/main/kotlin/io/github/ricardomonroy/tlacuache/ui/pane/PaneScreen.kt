@@ -55,9 +55,10 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.key.utf16CodePoint
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -109,7 +110,11 @@ private fun TabScreen(
     paneKeys: (KeyEvent) -> Boolean,
 ) {
     // Con poca altura (teléfono en horizontal) el encabezado se reduce a una fila: el contenido manda.
-    val shortHeight = LocalConfiguration.current.screenHeightDp < SHORT_HEIGHT_DP
+    val shortHeight =
+        with(LocalDensity.current) {
+            LocalWindowInfo.current.containerSize.height
+                .toDp()
+        } < SHORT_HEIGHT
     val ui by tab.ui.collectAsStateWithLifecycle()
     val t = TlacuacheTheme.tokens
     // En primer plano se vigila la carpeta y se relee al volver (lo cambiado mientras tanto no generó
@@ -341,7 +346,7 @@ private fun TabScreen(
 }
 
 /** Por debajo de esta altura de ventana el encabezado ocupa una sola fila. */
-private const val SHORT_HEIGHT_DP = 480
+private val SHORT_HEIGHT = 480.dp
 
 /** Ctrl+T, Ctrl+W y Ctrl+Tab / Ctrl+Shift+Tab (UI_SPEC §8). */
 private fun handleTabKey(
