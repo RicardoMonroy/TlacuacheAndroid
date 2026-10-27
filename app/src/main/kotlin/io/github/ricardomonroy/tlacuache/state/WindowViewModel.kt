@@ -21,6 +21,9 @@ class WindowViewModel(
             isVolumeRoot = { it.absoluteFile == internalRoot },
         )
 
+    /** Barra de ruta: `~` es la raíz del almacenamiento interno. */
+    val pathInput = PathInput(internalRoot)
+
     /** Carpeta inicial: la del extra [EXTRA_PATH] si es una carpeta, si no la raíz interna. */
     private fun startDir(path: String?): File = path?.let(::File)?.takeIf { it.isDirectory } ?: internalRoot
 

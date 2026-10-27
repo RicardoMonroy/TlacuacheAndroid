@@ -27,6 +27,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,6 +39,7 @@ import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isAltPressed
+import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
@@ -53,13 +55,17 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.ricardomonroy.tlacuache.R
 import io.github.ricardomonroy.tlacuache.state.BackStep
+import io.github.ricardomonroy.tlacuache.state.PathInput
 import io.github.ricardomonroy.tlacuache.state.TabState
 import io.github.ricardomonroy.tlacuache.ui.theme.TlacuacheTheme
 import io.github.ricardomonroy.tlacuache.ui.theme.color
 
 /** Un panel con su carpeta actual. Relee al volver a primer plano (ARCHITECTURE §6). */
 @Composable
-fun PaneScreen(tab: TabState) {
+fun PaneScreen(
+    tab: TabState,
+    pathInput: PathInput,
+) {
     val ui by tab.ui.collectAsStateWithLifecycle()
     val t = TlacuacheTheme.tokens
     // La primera reanudación no relee: la pestaña ya leyó al crearse (o sobrevivió a una rotación).
@@ -70,20 +76,28 @@ fun PaneScreen(tab: TabState) {
         onPauseOrDispose { }
     }
 
-    // Gesto atrás y Esc (UI_SPEC §3). Menú, filtro y selección aún no existen (A1.7, A3.4).
+    var editingPath by rememberSaveable { mutableStateOf(false) }
+    // Gesto atrás y Esc (UI_SPEC §3): la ruta en edición cuenta como menú abierto. Filtro y selección llegan en A1.7 y A3.4.
     val backStep =
         BackStep.of(
-            menuOpen = false,
+            menuOpen = editingPath,
             filterActive = false,
             selectionActive = false,
             canGoBack = ui.canGoBack,
         )
     BackHandler(enabled = backStep != BackStep.EXIT) {
-        if (backStep == BackStep.HISTORY_BACK) tab.back()
+        when (backStep) {
+            BackStep.CLOSE_MENU -> editingPath = false
+            BackStep.HISTORY_BACK -> tab.back()
+            else -> Unit
+        }
     }
     // El panel recibe el foco para que los atajos funcionen sin tocar nada antes.
     val focus = remember { FocusRequester() }
-    LaunchedEffect(Unit) { focus.requestFocus() }
+    var paneHasFocus by remember { mutableStateOf(false) }
+    // Tocar un control que luego desaparece (una miga) deja la ventana sin foco y los atajos dejarían de llegar.
+    // shortcut: con un solo panel basta recuperarlo; con dos paneles (A2.2) debe decidirlo la ventana.
+    LaunchedEffect(paneHasFocus) { if (!paneHasFocus) focus.requestFocus() }
     // Con el foco en el panel mismo, ↑/↓ lo pasan a la lista (si no, las flechas no entran a las filas).
     val focusManager = LocalFocusManager.current
     var paneFocused by remember { mutableStateOf(false) }
@@ -102,13 +116,20 @@ fun PaneScreen(tab: TabState) {
                         focusManager.moveFocus(FocusDirection.Enter)
                     }
 
+                    event.isCtrlPressed && event.key == Key.L -> {
+                        editingPath = true
+                        true
+                    }
+
                     else -> {
                         handleNavigationKey(event, tab)
                     }
                 }
             }.focusRequester(focus)
-            .onFocusChanged { paneFocused = it.isFocused }
-            .focusable(),
+            .onFocusChanged {
+                paneFocused = it.isFocused
+                paneHasFocus = it.hasFocus
+            }.focusable(),
     ) {
         Row(
             Modifier
@@ -121,20 +142,17 @@ fun PaneScreen(tab: TabState) {
             NavButton("‹", R.string.nav_back, ui.canGoBack) { tab.back() }
             NavButton("›", R.string.nav_forward, ui.canGoForward) { tab.forward() }
             NavButton("↑", R.string.nav_up, ui.canGoUp) { tab.up() }
-            // shortcut: nombre de la carpeta y conteo; breadcrumb en A1.5, barra de estado en A2.5.
-            Column(Modifier.padding(start = 8.dp).weight(1f)) {
-                Text(
-                    if (ui.isVolumeRoot) stringResource(R.string.volume_internal) else ui.dir.name,
-                    color = t.colors.headerFg.color,
-                    style = MaterialTheme.typography.titleLarge,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Text(
-                    pluralStringResource(R.plurals.pane_item_count, ui.visible.size, ui.visible.size),
-                    color = t.colors.fgMuted.color,
-                    style = MaterialTheme.typography.bodySmall,
-                )
+            // shortcut: conteo bajo la ruta hasta la barra de estado (A2.5).
+            Column(Modifier.padding(start = 4.dp).weight(1f)) {
+                PathBar(ui, tab, pathInput, editingPath, { editingPath = it }, Modifier.fillMaxWidth())
+                if (!editingPath) {
+                    Text(
+                        pluralStringResource(R.plurals.pane_item_count, ui.visible.size, ui.visible.size),
+                        color = t.colors.fgMuted.color,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(start = 12.dp),
+                    )
+                }
             }
         }
         Box(Modifier.fillMaxSize()) {

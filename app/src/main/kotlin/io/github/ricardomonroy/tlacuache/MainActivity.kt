@@ -53,5 +53,10 @@ private fun App() {
         granted = StorageAccess.isGranted(context)
         onPauseOrDispose { }
     }
-    if (granted) PaneScreen(viewModel<WindowViewModel>().tab) else WelcomeScreen(onGranted = { granted = true })
+    if (granted) {
+        val window = viewModel<WindowViewModel>()
+        PaneScreen(window.tab, window.pathInput)
+    } else {
+        WelcomeScreen(onGranted = { granted = true })
+    }
 }

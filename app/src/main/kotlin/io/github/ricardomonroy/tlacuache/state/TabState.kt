@@ -39,6 +39,10 @@ class TabState(
         val canGoForward: Boolean = false,
         /** Falso en la raíz del volumen: más arriba no hay nada legible (`/storage/emulated`). */
         val canGoUp: Boolean = false,
+        /** Migas de la barra de ruta: de la raíz del volumen a [dir] (UI_SPEC §2). */
+        val crumbs: List<File> = listOf(dir),
+        /** La primera miga es la raíz de un volumen (se rotula con su nombre, no con `0`). */
+        val crumbsStartAtVolume: Boolean = false,
     )
 
     // shortcut: orden, filtro rápido y ocultos fijos hasta A1.7 (filtro) y A2 (encabezados de orden).
@@ -75,6 +79,25 @@ class TabState(
         history.forward()?.let { show(File(it)) }
     }
 
+    /** Va a una carpeta elegida en la barra de ruta (miga o texto ya resuelto). */
+    fun goTo(dir: File): GoTo {
+        if (volumeRootOf(dir) == null) return GoTo.OUTSIDE_STORAGE
+        if (!dir.isDirectory) return GoTo.NOT_A_FOLDER
+        navigate(dir)
+        return GoTo.OK
+    }
+
+    enum class GoTo { OK, NOT_A_FOLDER, OUTSIDE_STORAGE }
+
+    /** Raíz de volumen que contiene a [dir], o `null` si está fuera del almacenamiento del usuario (ADR-A04). */
+    private fun volumeRootOf(dir: File): File? = generateSequence(dir) { it.parentFile }.firstOrNull(isVolumeRoot)
+
+    /** De la raíz del volumen a [dir]; solo [dir] si está fuera de un volumen. */
+    private fun crumbsOf(dir: File): List<File> {
+        val root = volumeRootOf(dir) ?: return listOf(dir)
+        return generateSequence(dir) { if (it == root) null else it.parentFile }.toList().reversed()
+    }
+
     private fun navigate(dir: File) {
         if (history.navigate(dir.path)) show(dir)
     }
@@ -93,6 +116,8 @@ class TabState(
             canGoBack = history.canGoBack(),
             canGoForward = history.canGoForward(),
             canGoUp = !root && dir.parentFile != null,
+            crumbs = crumbsOf(dir),
+            crumbsStartAtVolume = volumeRootOf(dir) != null,
         )
     }
 

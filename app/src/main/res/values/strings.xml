@@ -18,7 +18,9 @@
     <string name="nav_back">Atrás</string>
     <string name="nav_forward">Adelante</string>
     <string name="nav_up">Subir un nivel</string>
-    <string name="volume_internal">Almacenamiento interno</string>
+    <string name="volume_internal_short">Interno</string>
+    <string name="path_not_a_folder">Esa carpeta no existe.</string>
+    <string name="path_outside_storage">Esa ruta está fuera de tu almacenamiento.</string>
     <string name="pane_empty">Aquí no hay nada… ni para el tlacuache.</string>
     <string name="pane_read_error">No se pudo leer esta carpeta.</string>
     <string name="pane_retry">Reintentar</string>

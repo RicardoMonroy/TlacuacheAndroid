@@ -65,6 +65,24 @@ class TabStateTest {
     }
 
     @Test
+    fun crumbsStartAtVolumeRoot() {
+        tab.open(dir("DCIM"))
+        tab.open(dir("Camera"))
+        assertEquals(listOf(root, File(root, "DCIM"), File(root, "DCIM/Camera")), ui.crumbs)
+    }
+
+    @Test
+    fun goToRejectsFilesAndOutsideStorage() {
+        File(root, "nota.txt").writeText("x")
+        assertEquals(TabState.GoTo.NOT_A_FOLDER, tab.goTo(File(root, "nota.txt")))
+        assertEquals(TabState.GoTo.OUTSIDE_STORAGE, tab.goTo(tmp.root))
+        assertEquals(root, ui.dir)
+        assertEquals(TabState.GoTo.OK, tab.goTo(File(root, "DCIM/Camera")))
+        assertEquals(File(root, "DCIM/Camera"), ui.dir)
+        assertTrue(ui.canGoBack)
+    }
+
+    @Test
     fun openingAFileDoesNotNavigate() {
         tab.open(FileEntry("foto.jpg", isDir = false, isHidden = false, size = 1u, modifiedMs = null))
         assertEquals(root, ui.dir)
