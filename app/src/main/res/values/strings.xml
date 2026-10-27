@@ -15,6 +15,9 @@
         <item quantity="one">%d elemento</item>
         <item quantity="other">%d elementos</item>
     </plurals>
+    <string name="nav_back">Atrás</string>
+    <string name="nav_forward">Adelante</string>
+    <string name="nav_up">Subir un nivel</string>
     <string name="volume_internal">Almacenamiento interno</string>
     <string name="pane_empty">Aquí no hay nada… ni para el tlacuache.</string>
     <string name="pane_read_error">No se pudo leer esta carpeta.</string>

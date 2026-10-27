@@ -17,7 +17,7 @@ Trabajar en orden. Cada tarea = un commit. Marcar `[x]` al cumplir el criterio d
 - [x] **A1.2 FFI de listado**: registros `FileEntry`/`Age`, `arrange()` y `age()` con pruebas en la crate. CA: `arrange` ordena 10 000 entradas en una llamada (prueba con tiempo medido).
 - [ ] **A1.3 Lista detallada**: `Listing` por lotes en IO + `arrange` + `LazyColumn` con `key` = nombre; columnas según ancho; chip de edad. CA: abre una carpeta de 10 000 archivos en **T** sin congelar la UI (generar con `adb shell`).
   - Avance (2026-10-27): en **P**, `/sdcard/TlacuacheTest10k` (10 000 archivos) se lista completa en menos de 3 s; al desplazar, 1.9 % de cuadros lentos y percentil 90 en 8 ms (`dumpsys gfxinfo`). Relee al volver a primer plano. Falta **T**.
-- [ ] **A1.4 Navegación**: tocar/Enter entra, ↑/Backspace sube, historial con `PathHistory`, gesto atrás según UI_SPEC §3. CA: prueba JVM del orden del gesto atrás + prueba manual en **P**.
+- [x] **A1.4 Navegación**: tocar/Enter entra, ↑/Backspace sube, historial con `PathHistory`, gesto atrás según UI_SPEC §3. CA: prueba JVM del orden del gesto atrás + prueba manual en **P**.
 - [ ] **A1.5 Barra de ruta**: breadcrumb desde el volumen («Interno › DCIM»), modo editable (Ctrl+L o toque en zona vacía) con autocompletado del core. CA: navegar escribiendo una ruta en **PE**.
 - [ ] **A1.6 Abrir archivos**: `FileProvider`, Abrir, Abrir con…, Compartir. CA: abre una foto, un PDF y un video con sus apps en **T**.
 - [ ] **A1.7 Filtro rápido y ocultos**: escribir con teclado físico, botón de buscar en táctil, Esc limpia, Ctrl+H; `Android/` oculta (ADR-A06). CA: `cancion` encuentra `Canción` en **PE**.

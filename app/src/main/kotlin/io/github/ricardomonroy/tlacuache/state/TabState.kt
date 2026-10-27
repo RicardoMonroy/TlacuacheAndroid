@@ -1,6 +1,7 @@
 package io.github.ricardomonroy.tlacuache.state
 
 import io.github.ricardomonroy.tlacuache.ffi.FileEntry
+import io.github.ricardomonroy.tlacuache.ffi.PathHistory
 import io.github.ricardomonroy.tlacuache.ffi.SortKey
 import io.github.ricardomonroy.tlacuache.ffi.SortSpec
 import io.github.ricardomonroy.tlacuache.ffi.arrange
@@ -34,6 +35,10 @@ class TabState(
         val failed: Boolean = false,
         /** Referencia para la columna «Edad»; se fija en cada lectura. */
         val nowMs: Long = System.currentTimeMillis(),
+        val canGoBack: Boolean = false,
+        val canGoForward: Boolean = false,
+        /** Falso en la raíz del volumen: más arriba no hay nada legible (`/storage/emulated`). */
+        val canGoUp: Boolean = false,
     )
 
     // shortcut: orden, filtro rápido y ocultos fijos hasta A1.7 (filtro) y A2 (encabezados de orden).
@@ -41,12 +46,54 @@ class TabState(
     private val query = ""
     private val showHidden = false
 
-    private val _ui = MutableStateFlow(Ui(dir, isVolumeRoot(dir)))
+    private val history = PathHistory(dir.path)
+    private val _ui = MutableStateFlow(uiFor(dir))
     val ui: StateFlow<Ui> = _ui.asStateFlow()
     private var job: Job? = null
 
     init {
         reload()
+    }
+
+    /** Entra a [entry] si es carpeta. Abrir archivos llega en A1.6. */
+    fun open(entry: FileEntry) {
+        if (entry.isDir) navigate(File(_ui.value.dir, entry.name))
+    }
+
+    fun up() {
+        if (_ui.value.canGoUp) {
+            _ui.value.dir.parentFile
+                ?.let(::navigate)
+        }
+    }
+
+    fun back() {
+        history.back()?.let { show(File(it)) }
+    }
+
+    fun forward() {
+        history.forward()?.let { show(File(it)) }
+    }
+
+    private fun navigate(dir: File) {
+        if (history.navigate(dir.path)) show(dir)
+    }
+
+    /** Cambia a [dir] sin rastro de la carpeta anterior y la lee. */
+    private fun show(dir: File) {
+        _ui.value = uiFor(dir)
+        reload()
+    }
+
+    private fun uiFor(dir: File): Ui {
+        val root = isVolumeRoot(dir)
+        return Ui(
+            dir = dir,
+            isVolumeRoot = root,
+            canGoBack = history.canGoBack(),
+            canGoForward = history.canGoForward(),
+            canGoUp = !root && dir.parentFile != null,
+        )
     }
 
     /** Relee la carpeta actual; cancela una lectura en curso. Conserva la lista mientras tanto. */

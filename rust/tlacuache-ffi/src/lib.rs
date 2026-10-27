@@ -5,6 +5,7 @@
 
 uniffi::setup_scaffolding!();
 
+mod history;
 mod listing;
 mod theme;
 

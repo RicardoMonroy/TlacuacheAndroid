@@ -2,6 +2,7 @@ package io.github.ricardomonroy.tlacuache.ui.pane
 
 import android.text.format.Formatter
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -58,6 +59,7 @@ private data class Columns(
 fun FileList(
     entries: List<FileEntry>,
     nowMs: Long,
+    onOpen: (FileEntry) -> Unit,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(),
 ) {
@@ -66,7 +68,7 @@ fun FileList(
         LazyColumn(Modifier.fillMaxSize(), rememberLazyListState(), contentPadding) {
             // El nombre es la identidad: releer la carpeta conserva desplazamiento y selección (ADR-A10).
             itemsIndexed(entries, key = { _, e -> e.name }) { index, entry ->
-                FileRow(entry, nowMs, columns, alt = index % 2 == 1)
+                FileRow(entry, nowMs, columns, alt = index % 2 == 1, onOpen = { onOpen(entry) })
             }
         }
     }
@@ -78,6 +80,7 @@ private fun FileRow(
     nowMs: Long,
     columns: Columns,
     alt: Boolean,
+    onOpen: () -> Unit,
 ) {
     val t = TlacuacheTheme.tokens
     val context = LocalContext.current
@@ -86,6 +89,8 @@ private fun FileRow(
             .fillMaxWidth()
             .height(RowHeight)
             .background(if (alt) t.colors.paneAltRow.color else t.colors.paneBg.color)
+            // shortcut: un toque o Enter abre; selección y doble clic con ratón llegan en A3.4 y A4.2.
+            .clickable(onClick = onOpen)
             .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
