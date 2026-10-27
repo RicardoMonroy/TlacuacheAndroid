@@ -5,6 +5,8 @@
 
 uniffi::setup_scaffolding!();
 
+mod theme;
+
 /// Versión de la FFI y app-id del core enlazado; prueba de que el puente funciona.
 #[uniffi::export]
 pub fn core_version() -> String {

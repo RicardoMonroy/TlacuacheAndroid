@@ -166,7 +166,9 @@ Reglas:
 ## 11. Temas (ADR-A07)
 
 - `theme_catalog` del core devuelve los temas incluidos (embebidos en el core) y los del usuario (`filesDir/themes/*.toml`) ya validados.
-- `TlacuacheTheme` construye `TlacuacheColors` (todos los tokens de `[colors]`, `[age]`, `[filetypes]`) y `TlacuacheStyle` (`radius`, `row_height`, `mono_ui`, `icon_style`, `selection_style`, `age_style`, `uppercase_headers`, `bracket_titles`, `glow`) como `CompositionLocal`, y deriva un `ColorScheme` de Material 3 para los componentes estándar (`primary` = `accent`, `background` = `window_bg`, `surface` = `pane_bg`, `error` = `error`…).
+- La FFI entrega un registro `ThemeTokens` (`colors`, `age`, `filetypes` con cada color como `UInt` ARGB `0xFFRRGGBB`, y `style` con `radius`, `row_height`, `mono_ui`, `icon_style`, `selection_style`, `age_style`, `uppercase_headers`, `bracket_titles`, `glow`…). `TlacuacheTheme(tokens)` lo publica tal cual en un `CompositionLocal` (`TlacuacheTheme.tokens`, sin copiarlo a otra clase Kotlin) y la extensión `UInt.color` lo convierte a `Color` al usarlo.
+- También deriva un `ColorScheme` de Material 3 para los componentes estándar (`primary` = `accent`, `background` = `window_bg`, `surface` = `pane_bg`, `surfaceVariant` = `sidebar_bg`, `outline` = `border_strong`, `error` = `error`…), las `Shapes` con `radius` y, si `mono_ui`, toda la tipografía en monoespaciada.
+- Barras del sistema transparentes (`enableEdgeToEdge` con `SystemBarStyle` según `variant`); cada pantalla aplica sus `WindowInsets`.
 - Fuente monoespaciada: JetBrains Mono empaquetada (OFL); `font_ui` vacío = fuente del sistema.
 - `[terminal]` y `[decor]` se ignoran en v0.1.
 

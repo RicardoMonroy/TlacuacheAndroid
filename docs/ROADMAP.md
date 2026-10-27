@@ -8,7 +8,7 @@ Trabajar en orden. Cada tarea = un commit. Marcar `[x]` al cumplir el criterio d
 - [x] **A0.3 Integración Gradle ↔ Rust**: `scripts/build-rust.sh`, tarea `buildRust` antes de `preBuild`, `jniLibs` y bindings generados en `sourceSets`, JNA y reglas de R8. CA: la app instalada muestra el texto devuelto por `core_version()`; el APK release (sin firmar) también.
 - [ ] **A0.4 Arranque en dispositivos**: comprobar la ABI de **T** (`adb shell getprop ro.product.cpu.abi`), instalar en **T** y **P**; crear el emulador **E10** (instalar imagen de sistema API 29). CA: la app abre en los tres.
   - Avance (2026-10-27): **P** (Android 17, arm64-v8a) y **E10** (AVD `Tlacuache_API29`, x86_64) muestran el texto del core. Falta **T**: se prueba cuando el autor la conecte.
-- [ ] **A0.5 Tema base**: `TlacuacheTheme` con los tokens de `nord` desde `core::theme_catalog`, edge-to-edge, JetBrains Mono empaquetada. CA: fondo y acentos Nord visibles; ningún color en el código (grep).
+- [x] **A0.5 Tema base**: `TlacuacheTheme` con los tokens de `nord` desde `core::theme_catalog`, edge-to-edge, JetBrains Mono empaquetada. CA: fondo y acentos Nord visibles; ningún color en el código (grep).
 - [ ] **A0.6 Calidad**: ktlint, Android Lint con advertencias como error, `scripts/check.sh` (fmt/clippy de la ffi + lint + ktlint + test), pruebas JVM que cargan el core de host. CA: script en verde.
 
 ## Hito A1 — Un panel que navega
