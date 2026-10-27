@@ -30,6 +30,7 @@ TlacuacheAndroid/
 │       │       ├── storage/
 │       │       │   ├── StorageAccess.kt # acceso a archivos según API
 │       │       │   ├── Volumes.kt       # StorageManager + StatFs + avisos de montaje
+│       │       │   ├── FavoritesStore.kt # [[favorites]] de config.toml (core) con escritura atómica
 │       │       │   ├── Places.kt        # carpetas estándar
 │       │       │   ├── Listing.kt       # lectura de carpetas en IO, por lotes
 │       │       │   ├── FolderWatcher.kt # FileObserver + debounce

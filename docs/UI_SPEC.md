@@ -98,7 +98,7 @@ La app distingue el tipo de puntero de cada evento (`PointerType.Touch` / `Mouse
 
 - **Lugares**: Fotos (`DCIM`), Imágenes (`Pictures`), Videos (`Movies`), Descargas (`Download`), Documentos (`Documents`), Música (`Music`), Sonidos (`Ringtones`, `Notifications`, `Alarms` agrupados; se omiten si no existen), Grabaciones (`Recordings`, Android 12+). Cada lugar aparece solo si su carpeta existe; «Sonidos» abre la primera de las tres que exista. La raíz del almacenamiento interno se abre desde su volumen («Interno»).
 - **Volúmenes**: Interno, tarjetas SD y USB (`StorageManager`), con barra de uso (aviso ≥ 80 %, crítico ≥ 90 %, `core::usage`) y espacio libre. Aparecen y desaparecen al conectarlos.
-- **Favoritos**: grupos con nombre; añadir arrastrando una carpeta o desde el menú contextual; reordenar arrastrando. Persistidos en la configuración.
+- **Favoritos**: grupos con nombre; añadir arrastrando una carpeta o desde el menú contextual (⋮ del panel o pulsación larga sobre una carpeta: «Añadir a favoritos», al primer grupo); reordenar arrastrando. Táctil: pulsación larga sobre un favorito da Subir, Bajar, Mover a «grupo» y Quitar; tocar el nombre de un grupo da Renombrar y Eliminar; + crea un grupo. En el riel aparecen como carpetas. Persistidos en `[[favorites]]` de `config.toml`, con `~` para el almacenamiento interno, como en Linux.
 - **Papelera**: abre la vista de papelera de todos los volúmenes (Restaurar, Borrar permanentemente, Vaciar).
 - Tocar un lugar abre la carpeta en el panel activo; con Ctrl+clic o clic medio, en una pestaña nueva.
 

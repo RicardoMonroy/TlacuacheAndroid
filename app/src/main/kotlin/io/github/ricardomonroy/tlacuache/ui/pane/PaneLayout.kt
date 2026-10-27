@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -24,9 +25,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
@@ -48,6 +52,7 @@ import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -112,85 +117,93 @@ fun PaneLayout(window: WindowViewModel) {
     // Cada panel conserva sitio para botones y ruta; en un teléfono horizontal el divisor apenas se mueve.
     val minSplit = (with(LocalDensity.current) { MIN_PANE_WIDTH.toPx() } / rowWidth).coerceAtMost(0.5f)
     val shownSplit = split.coerceIn(minSplit, 1 - minSplit)
-    ModalNavigationDrawer(
-        drawerContent = {
-            // Como cajón llega al borde de la pantalla: nada bajo la cámara en horizontal.
-            val cutout = WindowInsets.displayCutout.only(WindowInsetsSides.Start)
-            Sidebar(
-                items,
-                toggleDrawer,
-                R.string.sidebar_collapse,
-                Modifier.background(t.colors.sidebarBg.color).windowInsetsPadding(cutout).width(SidebarWidth),
-            )
-        },
-        drawerState = drawer,
-        // En compacta se abre también deslizando desde el borde; en las demás, solo con ☰.
-        gesturesEnabled = !wide || drawer.isOpen,
-        scrimColor =
-            t.colors.windowBg.color
-                .copy(alpha = 0.6f),
-    ) {
-        Row(
-            Modifier
-                .fillMaxSize()
-                .background(t.colors.paneBg.color)
-                // En horizontal, la cámara frontal queda a un lado: nada debajo de ella.
-                .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))
-                .onKeyEvent { event ->
-                    if (event.type == KeyEventType.KeyDown && event.key == Key.F9) {
-                        if (permanentFits) window.toggleSidebar() else toggleDrawer()
-                        true
-                    } else {
-                        handleWindowKey(event, window, wide)
-                    }
-                },
+    val snackbar = remember { SnackbarHostState() }
+    val resources = LocalResources.current
+    LaunchedEffect(window) { window.notices.collect { snackbar.showSnackbar(resources.getString(it)) } }
+    Box(Modifier.fillMaxSize()) {
+        ModalNavigationDrawer(
+            drawerContent = {
+                // Como cajón llega al borde de la pantalla: nada bajo la cámara en horizontal.
+                val cutout = WindowInsets.displayCutout.only(WindowInsetsSides.Start)
+                Sidebar(
+                    items,
+                    toggleDrawer,
+                    R.string.sidebar_collapse,
+                    Modifier.background(t.colors.sidebarBg.color).windowInsetsPadding(cutout).width(SidebarWidth),
+                )
+            },
+            drawerState = drawer,
+            // En compacta se abre también deslizando desde el borde; en las demás, solo con ☰.
+            gesturesEnabled = !wide || drawer.isOpen,
+            scrimColor =
+                t.colors.windowBg.color
+                    .copy(alpha = 0.6f),
         ) {
-            when {
-                !wide -> {}
-
-                permanentFits && !collapsed -> {
-                    Sidebar(items, window::toggleSidebar, R.string.sidebar_collapse, Modifier.width(SidebarWidth))
-                }
-
-                else -> {
-                    // ☰ del riel: expande la permanente si cabe; si no, abre el cajón con la barra completa.
-                    val expand = if (permanentFits) window::toggleSidebar else toggleDrawer
-                    SidebarRail(items, expand, R.string.sidebar_expand)
-                }
-            }
-            Row(Modifier.weight(1f).onSizeChanged { rowWidth = it.width.toFloat().coerceAtLeast(1f) }) {
-                if (wide && dual) {
-                    window.panes.forEachIndexed { i, pane ->
-                        if (i == 1) {
-                            PaneDivider { window.moveSplit(it / rowWidth, minSplit) }
+            Row(
+                Modifier
+                    .fillMaxSize()
+                    .background(t.colors.paneBg.color)
+                    // En horizontal, la cámara frontal queda a un lado: nada debajo de ella.
+                    .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))
+                    .onKeyEvent { event ->
+                        if (event.type == KeyEventType.KeyDown && event.key == Key.F9) {
+                            if (permanentFits) window.toggleSidebar() else toggleDrawer()
+                            true
+                        } else {
+                            handleWindowKey(event, window, wide)
                         }
+                    },
+            ) {
+                when {
+                    !wide -> {}
+
+                    permanentFits && !collapsed -> {
+                        Sidebar(items, window::toggleSidebar, R.string.sidebar_collapse, Modifier.width(SidebarWidth))
+                    }
+
+                    else -> {
+                        // ☰ del riel: expande la permanente si cabe; si no, abre el cajón con la barra completa.
+                        val expand = if (permanentFits) window::toggleSidebar else toggleDrawer
+                        SidebarRail(items, expand, R.string.sidebar_expand)
+                    }
+                }
+                Row(Modifier.weight(1f).onSizeChanged { rowWidth = it.width.toFloat().coerceAtLeast(1f) }) {
+                    if (wide && dual) {
+                        window.panes.forEachIndexed { i, pane ->
+                            if (i == 1) {
+                                PaneDivider { window.moveSplit(it / rowWidth, minSplit) }
+                            }
+                            PaneScreen(
+                                pane,
+                                window.pathInput,
+                                active = i == active && !drawer.isOpen,
+                                onActivate = { window.activate(i) },
+                                dual = true,
+                                onToggleDual = window::toggleDual,
+                                onAddFavorite = window::addFavorite,
+                                modifier = Modifier.weight(if (i == 0) shownSplit else 1 - shownSplit),
+                            )
+                        }
+                    } else {
                         PaneScreen(
-                            pane,
+                            window.panes[active],
                             window.pathInput,
-                            active = i == active && !drawer.isOpen,
-                            onActivate = { window.activate(i) },
-                            dual = true,
+                            active = !drawer.isOpen,
+                            onActivate = {},
+                            switcher = {
+                                if (!wide) DrawerButton(toggleDrawer)
+                                PaneSwitcher(active, window::activate)
+                            },
+                            dual = if (wide) false else null,
                             onToggleDual = window::toggleDual,
-                            modifier = Modifier.weight(if (i == 0) shownSplit else 1 - shownSplit),
+                            onAddFavorite = window::addFavorite,
+                            modifier = Modifier.weight(1f),
                         )
                     }
-                } else {
-                    PaneScreen(
-                        window.panes[active],
-                        window.pathInput,
-                        active = !drawer.isOpen,
-                        onActivate = {},
-                        switcher = {
-                            if (!wide) DrawerButton(toggleDrawer)
-                            PaneSwitcher(active, window::activate)
-                        },
-                        dual = if (wide) false else null,
-                        onToggleDual = window::toggleDual,
-                        modifier = Modifier.weight(1f),
-                    )
                 }
             }
         }
+        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).windowInsetsPadding(WindowInsets.navigationBars))
     }
 }
 
@@ -203,9 +216,10 @@ private fun sidebarItems(
 ): SidebarItems {
     val places by window.places.collectAsStateWithLifecycle()
     val volumes by window.volumes.collectAsStateWithLifecycle()
+    val favorites by window.favorites.collectAsStateWithLifecycle()
     val tabs by window.panes[active].tabs.collectAsStateWithLifecycle()
     val ui by tabs.current.ui.collectAsStateWithLifecycle()
-    return SidebarItems(places, volumes, ui.dir, onOpen)
+    return SidebarItems(places, volumes, favorites, ui.dir, onOpen, window::editFavorites)
 }
 
 /** ☰ en la cabecera del panel (compacta): abre el cajón con la barra lateral. */

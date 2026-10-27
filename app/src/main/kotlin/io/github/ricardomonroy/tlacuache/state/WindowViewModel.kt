@@ -6,18 +6,25 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import io.github.ricardomonroy.tlacuache.R
+import io.github.ricardomonroy.tlacuache.ffi.FavoriteGroup
+import io.github.ricardomonroy.tlacuache.ffi.Favorites
+import io.github.ricardomonroy.tlacuache.storage.FavoritesStore
 import io.github.ricardomonroy.tlacuache.storage.Volume
 import io.github.ricardomonroy.tlacuache.storage.Volumes
 import io.github.ricardomonroy.tlacuache.storage.fileObserverWatcher
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import java.io.File
 
 /** Estado de una ventana (ARCHITECTURE §5): dos paneles con sus pestañas y cuál está activo. */
@@ -71,6 +78,40 @@ class WindowViewModel(
             .flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
+    // shortcut: un almacén por ventana; con varias ventanas (A4.5) debe compartirse.
+    private val favoritesStore = FavoritesStore(File(app.filesDir, "config.toml"), internalRoot)
+
+    /** Grupos de favoritos con rutas absolutas (UI_SPEC §6). */
+    val favorites: StateFlow<List<FavoriteGroup>> = favoritesStore.groups
+
+    private val _notices = MutableSharedFlow<Int>(extraBufferCapacity = 4)
+
+    /** Avisos breves de la ventana (texto de `strings.xml`) para un `Snackbar`. */
+    val notices: SharedFlow<Int> = _notices.asSharedFlow()
+
+    /** Cambia los favoritos y guarda; un fallo al guardar se avisa aquí, el resto lo decide [onResult]. */
+    fun editFavorites(
+        change: (Favorites) -> Unit,
+        onResult: (FavoritesStore.Result) -> Unit = {},
+    ) {
+        viewModelScope.launch {
+            val result = favoritesStore.edit(change)
+            if (result == FavoritesStore.Result.FAILED) _notices.tryEmit(R.string.favorites_save_error)
+            onResult(result)
+        }
+    }
+
+    /** Añade [dir] al primer grupo de favoritos («Favoritos» si aún no hay ninguno). */
+    fun addFavorite(dir: File) {
+        var added = false
+        val group = getApplication<Application>().getString(R.string.favorites_default_group)
+        editFavorites({ added = it.add(dir.path, group) }) {
+            if (it == FavoritesStore.Result.OK) {
+                _notices.tryEmit(if (added) R.string.favorite_added else R.string.favorite_exists)
+            }
+        }
+    }
+
     private val _sidebarCollapsed = MutableStateFlow(false)
 
     /** Barra lateral permanente reducida a riel (F9; UI_SPEC §6). */
@@ -99,6 +140,10 @@ class WindowViewModel(
         delta: Float,
         min: Float,
     ) = _split.update { (it + delta).coerceIn(min, 1 - min) }
+
+    init {
+        viewModelScope.launch { favoritesStore.load() }
+    }
 
     override fun onCleared() {
         panes.flatMap { it.tabs.value.list }.forEach(TabState::stopWatching)

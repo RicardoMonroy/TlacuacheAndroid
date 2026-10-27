@@ -54,6 +54,7 @@ enum class FileAction(
     OPEN(R.string.action_open),
     OPEN_WITH(R.string.action_open_with),
     SHARE(R.string.action_share),
+    ADD_FAVORITE(R.string.favorite_add),
 }
 
 // shortcut: filas de 48 dp (táctil); la densidad según el puntero llega en A4.2.
@@ -111,15 +112,23 @@ private fun FileRow(
         RowContent(entry, nowMs, columns, alt, onOpen, onLongPress = { menu = true })
         // shortcut: menú mínimo por pulsación larga hasta la selección (A3.4) y el menú contextual completo (A3.11).
         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-            FileAction.entries.filter { !entry.isDir || it == FileAction.OPEN }.forEach { action ->
-                DropdownMenuItem(
-                    text = { Text(stringResource(action.label)) },
-                    onClick = {
-                        menu = false
-                        onAction(action)
-                    },
-                )
-            }
+            FileAction.entries
+                .filter {
+                    if (entry.isDir) {
+                        it == FileAction.OPEN || it == FileAction.ADD_FAVORITE
+                    } else {
+                        it !=
+                            FileAction.ADD_FAVORITE
+                    }
+                }.forEach { action ->
+                    DropdownMenuItem(
+                        text = { Text(stringResource(action.label)) },
+                        onClick = {
+                            menu = false
+                            onAction(action)
+                        },
+                    )
+                }
         }
     }
 }

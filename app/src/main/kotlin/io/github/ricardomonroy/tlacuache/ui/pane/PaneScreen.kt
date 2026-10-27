@@ -96,6 +96,7 @@ fun PaneScreen(
     onActivate: () -> Unit,
     dual: Boolean?,
     onToggleDual: () -> Unit,
+    onAddFavorite: (File) -> Unit,
     modifier: Modifier = Modifier,
     switcher: (@Composable () -> Unit)? = null,
 ) {
@@ -115,7 +116,7 @@ fun PaneScreen(
             TabScreen(
                 tabs.current,
                 pathInput,
-                Chrome(active, accent = switcher == null, switcher, dual, onToggleDual, activate),
+                Chrome(active, accent = switcher == null, switcher, dual, onToggleDual, activate, onAddFavorite),
                 tabStrip = { TabStrip(tabs, pane) },
                 tabMenu = { TabMenuButton(tabs, pane) },
                 paneKeys = { handleTabKey(it, pane) },
@@ -132,6 +133,7 @@ private class Chrome(
     val dual: Boolean?,
     val onToggleDual: () -> Unit,
     val onActivate: () -> Unit,
+    val onAddFavorite: (File) -> Unit,
 )
 
 /** Contenido de una pestaña. Relee al volver a primer plano y vigila su carpeta (ARCHITECTURE §6). */
@@ -176,6 +178,11 @@ private fun TabScreen(
         val file = File(ui.dir, entry.name)
         val started =
             when {
+                entry.isDir && action == FileAction.ADD_FAVORITE -> {
+                    chrome.onAddFavorite(file)
+                    true
+                }
+
                 entry.isDir -> {
                     tab.open(entry)
                     true
@@ -345,6 +352,13 @@ private fun TabScreen(
                         onClick = {
                             moreMenu = false
                             tab.toggleHidden()
+                        },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(stringResource(R.string.favorite_add)) },
+                        onClick = {
+                            moreMenu = false
+                            chrome.onAddFavorite(ui.dir)
                         },
                     )
                     chrome.dual?.let { dual ->

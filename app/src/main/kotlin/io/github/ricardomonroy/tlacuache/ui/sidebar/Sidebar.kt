@@ -4,7 +4,7 @@ import android.text.format.Formatter
 import androidx.annotation.DrawableRes
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -39,9 +39,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.ricardomonroy.tlacuache.R
+import io.github.ricardomonroy.tlacuache.ffi.FavoriteGroup
+import io.github.ricardomonroy.tlacuache.ffi.Favorites
 import io.github.ricardomonroy.tlacuache.ffi.UsageLevel
 import io.github.ricardomonroy.tlacuache.ffi.usage
 import io.github.ricardomonroy.tlacuache.state.Place
+import io.github.ricardomonroy.tlacuache.storage.FavoritesStore
 import io.github.ricardomonroy.tlacuache.storage.Volume
 import io.github.ricardomonroy.tlacuache.ui.theme.TlacuacheTheme
 import io.github.ricardomonroy.tlacuache.ui.theme.color
@@ -54,10 +57,16 @@ val SidebarWidth: Dp = 260.dp
 class SidebarItems(
     val places: List<Place>,
     val volumes: List<Volume>,
+    val favorites: List<FavoriteGroup>,
     /** Carpeta de la pestaña activa: su lugar o volumen se resalta. */
     val current: File?,
     val onOpen: (File) -> Unit,
-)
+    /** Cambia los favoritos con las reglas del core y los guarda; el resultado llega en el hilo principal. */
+    val editFavorites: (change: (Favorites) -> Unit, onResult: (FavoritesStore.Result) -> Unit) -> Unit,
+) {
+    /** Rótulo de una carpeta: el nombre del volumen si es su raíz, si no el de la carpeta. */
+    fun labelOf(dir: File): String = volumes.firstOrNull { it.root == dir }?.name ?: dir.name
+}
 
 /**
  * Barra lateral completa: lugares y volúmenes con su uso de disco. [onMenu] es el botón ☰ de la
@@ -84,9 +93,10 @@ fun Sidebar(
         items.places.forEach { place ->
             Entry(place.kind.icon, stringResource(place.label), place.dir == items.current, { items.onOpen(place.dir) })
         }
+        FavoritesSection(items)
         SectionTitle(R.string.sidebar_volumes)
         items.volumes.forEach { volume ->
-            Entry(volume.kind.icon, volume.name, volume.root == items.current, { items.onOpen(volume.root) }) {
+            Entry(volume.kind.icon, volume.name, volume.root == items.current, { items.onOpen(volume.root) }, null) {
                 VolumeUsage(volume)
             }
         }
@@ -136,6 +146,11 @@ fun SidebarRail(
     ) {
         MenuButton(menuLabel, onMenu)
         items.places.forEach { item(it.kind.icon, stringResource(it.label), it.dir) }
+        items.favorites.flatMap { it.paths }.forEach {
+            File(it).let { dir ->
+                item(R.drawable.ic_folder, items.labelOf(dir), dir)
+            }
+        }
         items.volumes.forEach { item(it.kind.icon, it.name, it.root) }
     }
 }
@@ -154,24 +169,38 @@ private fun MenuButton(
 }
 
 @Composable
-private fun SectionTitle(
+internal fun SectionTitle(
     @StringRes text: Int,
+    trailing: (@Composable () -> Unit)? = null,
+) {
+    val t = TlacuacheTheme.tokens
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        SectionLabel(stringResource(text).uppercase(), Modifier.weight(1f))
+        trailing?.invoke()
+    }
+}
+
+@Composable
+internal fun SectionLabel(
+    text: String,
+    modifier: Modifier = Modifier,
 ) {
     val t = TlacuacheTheme.tokens
     Text(
-        stringResource(text).uppercase(),
+        text,
         color = t.colors.fgMuted.color,
         style = MaterialTheme.typography.labelMedium,
-        modifier = Modifier.padding(start = 16.dp, top = 16.dp, bottom = 4.dp),
+        modifier = modifier.padding(start = 16.dp, top = 16.dp, bottom = 4.dp),
     )
 }
 
 @Composable
-private fun Entry(
+internal fun Entry(
     @DrawableRes icon: Int,
     label: String,
     selected: Boolean,
     onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
     below: (@Composable () -> Unit)? = null,
 ) {
     val t = TlacuacheTheme.tokens
@@ -183,7 +212,7 @@ private fun Entry(
             .background(
                 if (selected) t.colors.selectionBg.color else t.colors.sidebarBg.color,
                 MaterialTheme.shapes.small,
-            ).clickable(role = Role.Button, onClick = onClick)
+            ).combinedClickable(role = Role.Button, onLongClick = onLongClick, onClick = onClick)
             .padding(horizontal = 8.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
