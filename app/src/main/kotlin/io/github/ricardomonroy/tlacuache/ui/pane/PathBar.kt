@@ -92,14 +92,7 @@ private fun Breadcrumb(
         Row(Modifier.horizontalScroll(scroll), verticalAlignment = Alignment.CenterVertically) {
             ui.crumbs.forEachIndexed { i, crumb ->
                 if (i > 0) Text("›", color = t.colors.fgMuted.color)
-                val label =
-                    if (i == 0 &&
-                        ui.crumbsStartAtVolume
-                    ) {
-                        stringResource(R.string.volume_internal_short)
-                    } else {
-                        crumb.name
-                    }
+                val label = ui.rootLabel?.takeIf { i == 0 } ?: crumb.name
                 val current = i == ui.crumbs.lastIndex
                 TextButton(onClick = { onCrumb(crumb) }, enabled = !current) {
                     Text(

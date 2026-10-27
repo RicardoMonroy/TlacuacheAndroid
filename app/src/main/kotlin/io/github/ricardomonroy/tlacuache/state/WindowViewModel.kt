@@ -1,23 +1,42 @@
 package io.github.ricardomonroy.tlacuache.state
 
+import android.app.Application
 import android.os.Environment
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import io.github.ricardomonroy.tlacuache.R
+import io.github.ricardomonroy.tlacuache.storage.Volume
+import io.github.ricardomonroy.tlacuache.storage.Volumes
 import io.github.ricardomonroy.tlacuache.storage.fileObserverWatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import java.io.File
 
 /** Estado de una ventana (ARCHITECTURE §5): dos paneles con sus pestañas y cuál está activo. */
 class WindowViewModel(
+    app: Application,
     savedState: SavedStateHandle,
-) : ViewModel() {
-    // shortcut: el almacenamiento interno es la única raíz de volumen hasta A2.3 (Volumes.kt).
+) : AndroidViewModel(app) {
     @Suppress("DEPRECATION")
     private val internalRoot: File = Environment.getExternalStorageDirectory().absoluteFile
+
+    /** Volúmenes montados; hasta la primera lectura, solo el interno (sin uso de disco). */
+    val volumes: StateFlow<List<Volume>> =
+        Volumes.observe(app).stateIn(
+            viewModelScope,
+            SharingStarted.Eagerly,
+            listOf(Volume(internalRoot, app.getString(R.string.volume_internal_short), Volume.Kind.INTERNAL, 0, 0)),
+        )
+
+    private fun volumeName(dir: File): String? = volumes.value.firstOrNull { it.root == dir.absoluteFile }?.name
 
     private val startDir = startDir(savedState.get<String>(EXTRA_PATH))
 
@@ -25,7 +44,7 @@ class WindowViewModel(
         TabState(
             scope = viewModelScope,
             dir = dir,
-            isVolumeRoot = { it.absoluteFile == internalRoot },
+            volumeName = ::volumeName,
             watcher = fileObserverWatcher,
         )
 
@@ -38,6 +57,26 @@ class WindowViewModel(
     fun activate(pane: Int) {
         if (pane in panes.indices) _activePane.value = pane
     }
+
+    /** Abre [dir] (un lugar o volumen de la barra lateral) en la pestaña actual del panel activo. */
+    fun openInActive(dir: File) {
+        panes[_activePane.value]
+            .tabs.value.current
+            .goTo(dir)
+    }
+
+    /** Lugares de la barra lateral: carpetas estándar del almacenamiento interno (se buscan en IO). */
+    val places: StateFlow<List<Place>> =
+        flow { emit(Place.existing(internalRoot)) }
+            .flowOn(Dispatchers.IO)
+            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    private val _sidebarCollapsed = MutableStateFlow(false)
+
+    /** Barra lateral permanente reducida a riel (F9; UI_SPEC §6). */
+    val sidebarCollapsed: StateFlow<Boolean> = _sidebarCollapsed.asStateFlow()
+
+    fun toggleSidebar() = _sidebarCollapsed.update { !it }
 
     /** Tab, alternador A/B en compacta. */
     fun activateOther() = _activePane.update { 1 - it }

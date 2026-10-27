@@ -28,7 +28,7 @@ class PaneStateTest {
         File(root, "DCIM").mkdirs()
         pane =
             PaneState(root) { dir ->
-                TabState(scope, dir, isVolumeRoot = { it == root }, watcher = { d, _ ->
+                TabState(scope, dir, volumeName = { if (it == root) "Interno" else null }, watcher = { d, _ ->
                     watching += d
                     FolderWatch { watching -= d }
                 })

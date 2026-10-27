@@ -38,7 +38,7 @@ class TabStateTest {
     fun setUp() {
         root = tmp.newFolder("volumen")
         File(root, "DCIM/Camera").mkdirs()
-        tab = TabState(scope, root, isVolumeRoot = { it == root }, watcher = watcher)
+        tab = TabState(scope, root, volumeName = { if (it == root) "Interno" else null }, watcher = watcher)
     }
 
     @After
@@ -81,6 +81,7 @@ class TabStateTest {
         tab.open(dir("DCIM"))
         tab.open(dir("Camera"))
         assertEquals(listOf(root, File(root, "DCIM"), File(root, "DCIM/Camera")), ui.crumbs)
+        assertEquals("Interno", ui.rootLabel)
     }
 
     @Test

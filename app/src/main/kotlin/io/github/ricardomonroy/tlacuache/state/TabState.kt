@@ -31,13 +31,14 @@ import java.io.IOException
 class TabState(
     private val scope: CoroutineScope,
     dir: File,
-    private val isVolumeRoot: (File) -> Boolean,
+    /** Nombre visible del volumen cuya raíz es el archivo dado («Interno», «SD»…), o `null`. */
+    private val volumeName: (File) -> String?,
     private val watcher: FolderWatcher,
 ) {
     data class Ui(
         val dir: File,
-        /** [dir] es la raíz de un volumen: se nombra por el volumen, no por su carpeta (`0`). */
-        val isVolumeRoot: Boolean = false,
+        /** Nombre del volumen si [dir] es su raíz: se rotula así, no por su carpeta (`0`). */
+        val volumeName: String? = null,
         /** Entradas visibles, en orden. */
         val visible: List<FileEntry> = emptyList(),
         val loading: Boolean = true,
@@ -51,8 +52,8 @@ class TabState(
         val canGoUp: Boolean = false,
         /** Migas de la barra de ruta: de la raíz del volumen a [dir] (UI_SPEC §2). */
         val crumbs: List<File> = listOf(dir),
-        /** La primera miga es la raíz de un volumen (se rotula con su nombre, no con `0`). */
-        val crumbsStartAtVolume: Boolean = false,
+        /** Nombre del volumen de la primera miga; `null` si [dir] está fuera de un volumen. */
+        val rootLabel: String? = null,
         /** Filtro rápido (UI_SPEC §8); se limpia al cambiar de carpeta. */
         val query: String = "",
         /** Ocultos visibles (Ctrl+H); se conserva al navegar. */
@@ -146,7 +147,13 @@ class TabState(
     enum class GoTo { OK, NOT_A_FOLDER, OUTSIDE_STORAGE }
 
     /** Raíz de volumen que contiene a [dir], o `null` si está fuera del almacenamiento del usuario (ADR-A04). */
-    private fun volumeRootOf(dir: File): File? = generateSequence(dir) { it.parentFile }.firstOrNull(isVolumeRoot)
+    private fun volumeRootOf(dir: File): File? =
+        generateSequence(dir) { it.parentFile }.firstOrNull {
+            volumeName(it) !=
+                null
+        }
+
+    private fun isVolumeRoot(dir: File) = volumeName(dir) != null
 
     /** De la raíz del volumen a [dir]; solo [dir] si está fuera de un volumen. */
     private fun crumbsOf(dir: File): List<File> {
@@ -170,15 +177,15 @@ class TabState(
         dir: File,
         showHidden: Boolean,
     ): Ui {
-        val root = isVolumeRoot(dir)
+        val name = volumeName(dir)
         return Ui(
             dir = dir,
-            isVolumeRoot = root,
+            volumeName = name,
             canGoBack = history.canGoBack(),
             canGoForward = history.canGoForward(),
-            canGoUp = !root && dir.parentFile != null,
+            canGoUp = name == null && dir.parentFile != null,
             crumbs = crumbsOf(dir),
-            crumbsStartAtVolume = volumeRootOf(dir) != null,
+            rootLabel = volumeRootOf(dir)?.let(volumeName),
             showHidden = showHidden,
         )
     }

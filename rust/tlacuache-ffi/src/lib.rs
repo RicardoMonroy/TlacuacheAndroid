@@ -9,6 +9,7 @@ mod history;
 mod listing;
 mod path_input;
 mod theme;
+mod usage;
 
 /// Versión de la FFI y app-id del core enlazado; prueba de que el puente funciona.
 #[uniffi::export]

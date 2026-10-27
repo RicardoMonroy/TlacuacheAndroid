@@ -107,7 +107,7 @@ fun TabMenuButton(
                 DropdownMenuItem(
                     text = {
                         Text(
-                            if (ui.isVolumeRoot) stringResource(R.string.volume_internal_short) else ui.dir.name,
+                            ui.volumeName ?: ui.dir.name,
                             color = if (index == tabs.active) t.colors.accent.color else t.colors.fg.color,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -149,7 +149,7 @@ private fun TabButton(
 ) {
     val t = TlacuacheTheme.tokens
     val ui by tab.ui.collectAsStateWithLifecycle()
-    val title = if (ui.isVolumeRoot) stringResource(R.string.volume_internal_short) else ui.dir.name
+    val title = ui.volumeName ?: ui.dir.name
     Box(
         Modifier
             .width(TabWidth)

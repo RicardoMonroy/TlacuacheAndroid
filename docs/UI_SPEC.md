@@ -14,6 +14,8 @@ El layout se elige con los umbrales de las *window size classes* de Material 3 (
 
 Con dos paneles, cada uno mide al menos 400 dp (botones y ruta legibles); en un teléfono horizontal el divisor apenas se mueve. «Doble panel» en el menú ⋮ (F3) apaga y enciende el modo dual en media y expandida; apagado se ve un panel con el alternador A/B. En compacta, sobre la fila de navegación va una fila con el alternador A/B y el botón de pestañas.
 
+La barra permanente necesita además 480 dp de alto: con poca altura (teléfono horizontal, 923 dp de ancho) se muestra el riel para no quitar sitio a los paneles, y su ☰ abre la barra completa como cajón. En expandida, ☰ o F9 reduce la permanente a riel y la vuelve a expandir. En compacta, ☰ va al inicio de la fila del alternador A/B.
+
 **Poca altura** (ventana de menos de 480 dp de alto, p. ej. teléfono en horizontal): el contenido manda. El encabezado se reduce a una sola fila de 48 dp: ‹ › ↑, ruta, botón de pestañas (número de pestañas; abre la lista para elegir, cerrar o abrir una nueva), alternador A/B si se ve un solo panel, buscar y ⋮. Sin tira de pestañas ni conteo bajo la ruta. Nada se dibuja debajo del recorte de la cámara a los lados.
 
 Columnas Miller (v0.2): solo disponibles en clase expandida.
@@ -94,7 +96,7 @@ La app distingue el tipo de puntero de cada evento (`PointerType.Touch` / `Mouse
 
 ## 6. Barra lateral
 
-- **Lugares**: Fotos (`DCIM`), Imágenes (`Pictures`), Videos (`Movies`), Descargas (`Download`), Documentos (`Documents`), Música (`Music`), Sonidos (`Ringtones`, `Notifications`, `Alarms` agrupados; se omiten si no existen), Grabaciones (`Recordings`, Android 12+). Raíz del almacenamiento interno al final.
+- **Lugares**: Fotos (`DCIM`), Imágenes (`Pictures`), Videos (`Movies`), Descargas (`Download`), Documentos (`Documents`), Música (`Music`), Sonidos (`Ringtones`, `Notifications`, `Alarms` agrupados; se omiten si no existen), Grabaciones (`Recordings`, Android 12+). Cada lugar aparece solo si su carpeta existe; «Sonidos» abre la primera de las tres que exista. La raíz del almacenamiento interno se abre desde su volumen («Interno»).
 - **Volúmenes**: Interno, tarjetas SD y USB (`StorageManager`), con barra de uso (aviso ≥ 80 %, crítico ≥ 90 %, `core::usage`) y espacio libre. Aparecen y desaparecen al conectarlos.
 - **Favoritos**: grupos con nombre; añadir arrastrando una carpeta o desde el menú contextual; reordenar arrastrando. Persistidos en la configuración.
 - **Papelera**: abre la vista de papelera de todos los volúmenes (Restaurar, Borrar permanentemente, Vaciar).

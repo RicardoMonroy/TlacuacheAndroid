@@ -416,7 +416,7 @@ private fun TabScreen(
 }
 
 /** Por debajo de esta altura de ventana el encabezado ocupa una sola fila. */
-private val SHORT_HEIGHT = 480.dp
+internal val SHORT_HEIGHT = 480.dp
 
 /** Ctrl+T, Ctrl+W y Ctrl+Tab / Ctrl+Shift+Tab (UI_SPEC §8). */
 private fun handleTabKey(
