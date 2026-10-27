@@ -1,11 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Tlacuache</string>
-    <string name="placeholder_greeting">Tlacuache para Android</string>
-    <plurals name="placeholder_root_entries">
-        <item quantity="one">%d elemento en el almacenamiento interno</item>
-        <item quantity="other">%d elementos en el almacenamiento interno</item>
-    </plurals>
 
     <!-- Bienvenida y permisos (UI_SPEC §10) -->
     <string name="welcome_title">Tus archivos, a la mano</string>
@@ -14,4 +9,22 @@
     <string name="welcome_grant_storage">Permitir acceso al almacenamiento</string>
     <string name="welcome_denied">Sin este permiso Tlacuache no puede mostrar tus carpetas. Puedes activarlo en Ajustes.</string>
     <string name="welcome_open_settings">Abrir Ajustes</string>
+
+    <!-- Panel (UI_SPEC §2) -->
+    <plurals name="pane_item_count">
+        <item quantity="one">%d elemento</item>
+        <item quantity="other">%d elementos</item>
+    </plurals>
+    <string name="volume_internal">Almacenamiento interno</string>
+    <string name="pane_empty">Aquí no hay nada… ni para el tlacuache.</string>
+    <string name="pane_read_error">No se pudo leer esta carpeta.</string>
+    <string name="pane_retry">Reintentar</string>
+
+    <!-- Edad compacta (THEMES.md §3) -->
+    <string name="age_now">ahora</string>
+    <string name="age_minutes">%dmin</string>
+    <string name="age_hours">%dh</string>
+    <string name="age_days">%dd</string>
+    <string name="age_months">%dM</string>
+    <string name="age_years">%da</string>
 </resources>
