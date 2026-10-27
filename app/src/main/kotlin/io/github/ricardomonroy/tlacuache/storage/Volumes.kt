@@ -1,5 +1,6 @@
 package io.github.ricardomonroy.tlacuache.storage
 
+import android.app.usage.StorageStatsManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -89,7 +90,7 @@ object Volumes {
             .filter { it.state == Environment.MEDIA_MOUNTED || it.state == Environment.MEDIA_MOUNTED_READ_ONLY }
             .mapNotNull { volume ->
                 val root = rootOf(context, storage, volume) ?: return@mapNotNull null
-                val stat = runCatching { StatFs(root.path) }.getOrNull()
+                val space = space(context, root)
                 val description = volume.getDescription(context)
                 Volume(
                     root = root,
@@ -103,10 +104,31 @@ object Volumes {
 
                             else -> Volume.Kind.SD
                         },
-                    free = stat?.availableBytes ?: 0,
-                    size = stat?.totalBytes ?: 0,
+                    free = space?.first ?: 0,
+                    size = space?.second ?: 0,
                 )
             }.sortedByDescending { it.kind == Volume.Kind.INTERNAL }
+    }
+
+    /** Bytes libres y totales del volumen de [root], o `null` si no se pudo leer. Llamar en IO. */
+    fun space(
+        context: Context,
+        root: File,
+    ): Pair<Long, Long>? {
+        val stat = runCatching { StatFs(root.path) }.getOrNull() ?: return null
+
+        @Suppress("DEPRECATION")
+        val internal = root == Environment.getExternalStorageDirectory().absoluteFile
+        // Del interno, Ajustes muestra el tamaño nominal (256 GB), no el del sistema de archivos (245 GB).
+        val total =
+            if (internal) {
+                runCatching {
+                    context.getSystemService(StorageStatsManager::class.java).getTotalBytes(StorageManager.UUID_DEFAULT)
+                }.getOrNull()
+            } else {
+                null
+            }
+        return stat.availableBytes to (total ?: stat.totalBytes)
     }
 
     /** Raíz del volumen: `directory` en API 30+; en API 29, su carpeta de la app sin `/Android/data/…`. */

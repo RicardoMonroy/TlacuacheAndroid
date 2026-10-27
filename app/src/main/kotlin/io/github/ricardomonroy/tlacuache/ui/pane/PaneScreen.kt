@@ -323,18 +323,7 @@ private fun TabScreen(
             NavButton("‹", R.string.nav_back, ui.canGoBack) { tab.back() }
             NavButton("›", R.string.nav_forward, ui.canGoForward) { tab.forward() }
             NavButton("↑", R.string.nav_up, ui.canGoUp) { tab.up() }
-            // shortcut: conteo bajo la ruta hasta la barra de estado (A2.5).
-            Column(Modifier.padding(start = 4.dp).weight(1f)) {
-                PathBar(ui, tab, pathInput, editingPath, { editingPath = it }, Modifier.fillMaxWidth())
-                if (!editingPath && !shortHeight) {
-                    Text(
-                        pluralStringResource(R.plurals.pane_item_count, ui.visible.size, ui.visible.size),
-                        color = t.colors.fgMuted.color,
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(start = 12.dp),
-                    )
-                }
-            }
+            PathBar(ui, tab, pathInput, editingPath, { editingPath = it }, Modifier.padding(start = 4.dp).weight(1f))
             if (shortHeight) {
                 chrome.switcher?.invoke()
                 tabMenu()
@@ -374,7 +363,7 @@ private fun TabScreen(
                 }
             }
         }
-        Box(Modifier.fillMaxSize()) {
+        Box(Modifier.weight(1f).fillMaxWidth()) {
             when {
                 ui.failed -> {
                     Message(stringResource(R.string.pane_read_error)) { tab.reload() }
@@ -396,7 +385,6 @@ private fun TabScreen(
                             onOpen = { act(it, FileAction.OPEN) },
                             onAction = act,
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = WindowInsets.navigationBars.asPaddingValues(),
                         )
                     }
                 }
@@ -417,15 +405,12 @@ private fun TabScreen(
                     modifier =
                         Modifier
                             .align(Alignment.BottomCenter)
-                            .windowInsetsPadding(WindowInsets.navigationBars)
                             .padding(bottom = 16.dp),
                 )
             }
-            SnackbarHost(
-                snackbar,
-                Modifier.align(Alignment.BottomCenter).windowInsetsPadding(WindowInsets.navigationBars),
-            )
+            SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
         }
+        StatusBar(ui, showFreeSpace = !compactWidth)
     }
 }
 

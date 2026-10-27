@@ -16,7 +16,7 @@ Con dos paneles, cada uno mide al menos 400 dp (botones y ruta legibles); en un 
 
 La barra permanente necesita además 480 dp de alto: con poca altura (teléfono horizontal, 923 dp de ancho) se muestra el riel para no quitar sitio a los paneles, y su ☰ abre la barra completa como cajón. En expandida, ☰ o F9 reduce la permanente a riel y la vuelve a expandir. En compacta, ☰ va al inicio de la fila del alternador A/B.
 
-**Poca altura** (ventana de menos de 480 dp de alto, p. ej. teléfono en horizontal): el contenido manda. El encabezado se reduce a una sola fila de 48 dp: ‹ › ↑, ruta, botón de pestañas (número de pestañas; abre la lista para elegir, cerrar o abrir una nueva), alternador A/B si se ve un solo panel, buscar y ⋮. Sin tira de pestañas ni conteo bajo la ruta. Nada se dibuja debajo del recorte de la cámara a los lados.
+**Poca altura** (ventana de menos de 480 dp de alto, p. ej. teléfono en horizontal): el contenido manda. El encabezado se reduce a una sola fila de 48 dp: ‹ › ↑, ruta, botón de pestañas (número de pestañas; abre la lista para elegir, cerrar o abrir una nueva), alternador A/B si se ve un solo panel, buscar y ⋮. Sin tira de pestañas. Nada se dibuja debajo del recorte de la cámara a los lados.
 
 Columnas Miller (v0.2): solo disponibles en clase expandida.
 
@@ -59,7 +59,7 @@ Compacta (teléfono vertical)
   - Íconos: cuadrícula de miniaturas (fotos, videos, PDF) o íconos de tipo; nombre en dos líneas. Pellizcar cambia el tamaño (v0.2).
   - Columnas Miller (v0.2, solo expandida).
 - **Edad relativa**: chip (o texto, según el tema) con formato compacto (`ahora`, `12min`, `2h`, `3d`, `3M`, `1a`); colores por bucket según `THEMES.md` §3.
-- **Barra de estado** del panel: elementos, seleccionados, tamaño seleccionado, espacio libre del volumen. En compacta se reduce a «N elementos» o «N seleccionados · tamaño».
+- **Barra de estado** del panel, al pie: elementos, seleccionados, tamaño seleccionado, espacio libre del volumen («133 GB libres de 256 GB»; del interno, el total nominal que muestra Ajustes, no el del sistema de archivos). En compacta se reduce a «N elementos» o «N seleccionados · tamaño». El espacio se relee con cada lectura de la carpeta.
 - **Estados vacíos** con la voz de la marca («Aquí no hay nada… ni para el tlacuache.»). Nunca humor en errores.
 
 ## 3. Interacción por tipo de puntero
