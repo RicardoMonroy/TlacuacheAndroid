@@ -63,7 +63,7 @@ Lo generado (`.so` por ABI y bindings Kotlin) va a `app/build/` y no se versiona
 
 - `scripts/build-rust.sh [debug|release] [abis…]`:
   1. `cargo ndk -t arm64-v8a -t armeabi-v7a -t x86_64 -o app/build/rustJniLibs build -p tlacuache-ffi` (`--release` en release).
-  2. `uniffi-bindgen generate --library <libtlacuache_ffi.so> --language kotlin --out-dir app/build/generated/uniffi` (binario propio de la crate, misma versión de UniFFI).
+  2. `cargo build -p tlacuache-ffi` para el host y `cargo run --features cli --bin uniffi-bindgen -- generate --library rust/target/debug/libtlacuache_ffi.so --language kotlin --out-dir app/build/generated/uniffi` (binario propio de la crate, misma versión de UniFFI). Se usa la librería del host porque las de Android en release van sin símbolos (`strip = true`) y sin ellos no hay metadatos de UniFFI.
 - `app/build.gradle.kts` registra una tarea `Exec` `buildRust` de la que depende `preBuild`, y añade ambas carpetas a `sourceSets` (`jniLibs` y `kotlin`). La propiedad `-Ptlacuache.abis=arm64-v8a` limita las ABI para iterar rápido.
 - NDK 28 alinea los `.so` a 16 KB por defecto (requisito de Play para Android 15+).
 - Los bindings de UniFFI usan JNA: dependencia `net.java.dev.jna:jna` (AAR) y reglas de R8 para conservar JNA y el paquete generado.

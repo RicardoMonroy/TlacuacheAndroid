@@ -4,7 +4,7 @@ Trabajar en orden. Cada tarea = un commit. Marcar `[x]` al cumplir el criterio d
 
 ## Hito A0 — Esqueleto
 - [x] **A0.1 Proyecto Gradle**: wrapper, Kotlin DSL, catálogo de versiones (vigentes y compatibles), módulo `app` con Compose y Material 3, `applicationId` y `namespace` según ADR-A12, `minSdk 29`/`targetSdk 36`. Licencia GPL, `README.md`, `.gitignore`, `git init`. CA: `./gradlew assembleDebug` genera el APK.
-- [ ] **A0.2 Crate `tlacuache-ffi`**: workspace en `rust/`, dependencia `tlacuache-core` por git a la etiqueta `v0.2.0`, una función de prueba (`core_version()`) y el binario `uniffi-bindgen`. Instalar `cargo-ndk`. CA: `cargo test` de la crate en verde y `cargo ndk` compila para las tres ABI.
+- [x] **A0.2 Crate `tlacuache-ffi`**: workspace en `rust/`, dependencia `tlacuache-core` por git a la etiqueta `v0.2.0`, una función de prueba (`core_version()`) y el binario `uniffi-bindgen`. Instalar `cargo-ndk`. CA: `cargo test` de la crate en verde y `cargo ndk` compila para las tres ABI.
 - [ ] **A0.3 Integración Gradle ↔ Rust**: `scripts/build-rust.sh`, tarea `buildRust` antes de `preBuild`, `jniLibs` y bindings generados en `sourceSets`, JNA y reglas de R8. CA: la app instalada muestra el texto devuelto por `core_version()`; el APK release (sin firmar) también.
 - [ ] **A0.4 Arranque en dispositivos**: comprobar la ABI de **T** (`adb shell getprop ro.product.cpu.abi`), instalar en **T** y **P**; crear el emulador **E10** (instalar imagen de sistema API 29). CA: la app abre en los tres.
 - [ ] **A0.5 Tema base**: `TlacuacheTheme` con los tokens de `nord` desde `core::theme_catalog`, edge-to-edge, JetBrains Mono empaquetada. CA: fondo y acentos Nord visibles; ningún color en el código (grep).

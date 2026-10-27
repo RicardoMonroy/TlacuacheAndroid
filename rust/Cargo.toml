@@ -1,0 +1,20 @@
+[workspace]
+resolver = "3"
+members = ["tlacuache-ffi"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+authors = ["Ricardo Monroy <rmonroy.rodriguez@gmail.com>"]
+license = "GPL-3.0-or-later"
+rust-version = "1.92"
+
+[profile.release]
+# Menos tamaño de los .so por ABI.
+lto = true
+codegen-units = 1
+strip = true
+
+# Desarrollo local del core sin publicar etiqueta (ARCHITECTURE §2). Nunca en un commit:
+# [patch."https://github.com/RicardoMonroy/Tlacuache"]
+# tlacuache-core = { path = "../../TlacuacheBrowser/crates/tlacuache-core" }
