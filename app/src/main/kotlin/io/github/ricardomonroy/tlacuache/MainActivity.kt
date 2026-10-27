@@ -14,11 +14,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.viewmodel.compose.viewModel
+import coil3.compose.setSingletonImageLoaderFactory
 import io.github.ricardomonroy.tlacuache.ffi.builtinTheme
 import io.github.ricardomonroy.tlacuache.ffi.defaultThemeId
 import io.github.ricardomonroy.tlacuache.state.WindowViewModel
 import io.github.ricardomonroy.tlacuache.storage.StorageAccess
 import io.github.ricardomonroy.tlacuache.ui.pane.PaneLayout
+import io.github.ricardomonroy.tlacuache.ui.pane.thumbnailLoader
 import io.github.ricardomonroy.tlacuache.ui.theme.TlacuacheTheme
 import io.github.ricardomonroy.tlacuache.ui.welcome.WelcomeScreen
 
@@ -47,6 +49,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun App() {
     val context = LocalContext.current
+    setSingletonImageLoaderFactory(::thumbnailLoader)
     var granted by remember { mutableStateOf(StorageAccess.isGranted(context)) }
     // Al volver de Ajustes (concedido o revocado) el estado puede haber cambiado.
     LifecycleResumeEffect(Unit) {

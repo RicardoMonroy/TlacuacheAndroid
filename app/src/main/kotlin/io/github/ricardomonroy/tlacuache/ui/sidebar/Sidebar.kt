@@ -260,11 +260,11 @@ private fun VolumeUsage(volume: Volume) {
 private val Place.Kind.icon: Int
     get() =
         when (this) {
-            Place.Kind.IMAGE -> R.drawable.ic_place_image
-            Place.Kind.VIDEO -> R.drawable.ic_place_video
+            Place.Kind.IMAGE -> R.drawable.ic_file_image
+            Place.Kind.VIDEO -> R.drawable.ic_file_video
             Place.Kind.DOWNLOAD -> R.drawable.ic_place_download
-            Place.Kind.DOCUMENT -> R.drawable.ic_place_document
-            Place.Kind.AUDIO -> R.drawable.ic_place_audio
+            Place.Kind.DOCUMENT -> R.drawable.ic_file_document
+            Place.Kind.AUDIO -> R.drawable.ic_file_audio
         }
 
 private val Volume.Kind.icon: Int

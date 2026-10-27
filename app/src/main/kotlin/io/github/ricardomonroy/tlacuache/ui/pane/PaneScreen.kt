@@ -269,6 +269,12 @@ private fun TabScreen(
                         true
                     }
 
+                    // Ctrl+1 lista, Ctrl+2 íconos (UI_SPEC §8).
+                    event.isCtrlPressed && (event.key == Key.One || event.key == Key.Two) -> {
+                        tab.setIconView(event.key == Key.Two)
+                        true
+                    }
+
                     // Escribir filtra; Backspace, Espacio y Esc editan el filtro solo si tiene texto (ADR-006).
                     filterKey(event)?.let(tab::applyFilterKey) == true -> {
                         true
@@ -344,6 +350,14 @@ private fun TabScreen(
                         },
                     )
                     DropdownMenuItem(
+                        text = { Text(stringResource(R.string.menu_icon_view)) },
+                        trailingIcon = { Checkbox(checked = ui.iconView, onCheckedChange = null) },
+                        onClick = {
+                            moreMenu = false
+                            tab.setIconView(!ui.iconView)
+                        },
+                    )
+                    DropdownMenuItem(
                         text = { Text(stringResource(R.string.favorite_add)) },
                         onClick = {
                             moreMenu = false
@@ -378,14 +392,24 @@ private fun TabScreen(
 
                 else -> {
                     // Cada carpeta empieza arriba: el estado de desplazamiento es por carpeta.
-                    key(ui.dir) {
-                        FileList(
-                            ui.visible,
-                            ui.nowMs,
-                            onOpen = { act(it, FileAction.OPEN) },
-                            onAction = act,
-                            modifier = Modifier.fillMaxSize(),
-                        )
+                    key(ui.dir, ui.iconView) {
+                        if (ui.iconView) {
+                            FileGrid(
+                                ui.dir,
+                                ui.visible,
+                                onOpen = { act(it, FileAction.OPEN) },
+                                onAction = act,
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                        } else {
+                            FileList(
+                                ui.visible,
+                                ui.nowMs,
+                                onOpen = { act(it, FileAction.OPEN) },
+                                onAction = act,
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                        }
                     }
                 }
             }

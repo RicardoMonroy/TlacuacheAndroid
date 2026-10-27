@@ -1,0 +1,105 @@
+package io.github.ricardomonroy.tlacuache.ui.pane
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import io.github.ricardomonroy.tlacuache.ffi.FileEntry
+import io.github.ricardomonroy.tlacuache.ui.theme.TlacuacheTheme
+import io.github.ricardomonroy.tlacuache.ui.theme.color
+import java.io.File
+
+/** Celdas de al menos este ancho: tres columnas en un teléfono vertical. */
+private val CellMinWidth = 104.dp
+
+/**
+ * Vista de íconos (UI_SPEC §2): cuadrícula con miniaturas de fotos, videos y PDF, o el ícono del tipo;
+ * nombre en dos líneas. Toque y pulsación larga como en la lista.
+ *
+ * shortcut: tamaño fijo; pellizcar para cambiarlo llega en v0.2.
+ */
+@Composable
+fun FileGrid(
+    dir: File,
+    entries: List<FileEntry>,
+    onOpen: (FileEntry) -> Unit,
+    onAction: (FileEntry, FileAction) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    LazyVerticalGrid(
+        GridCells.Adaptive(CellMinWidth),
+        modifier,
+        rememberLazyGridState(),
+        contentPadding = PaddingValues(4.dp),
+    ) {
+        // El nombre es la identidad, como en la lista (ADR-A10).
+        items(entries, key = { it.name }) { entry ->
+            Cell(dir, entry, { onOpen(entry) }) { onAction(entry, it) }
+        }
+    }
+}
+
+@Composable
+private fun Cell(
+    dir: File,
+    entry: FileEntry,
+    onOpen: () -> Unit,
+    onAction: (FileAction) -> Unit,
+) {
+    val t = TlacuacheTheme.tokens
+    var menu by remember { mutableStateOf(false) }
+    Box {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .clip(MaterialTheme.shapes.small)
+                .combinedClickable(onClick = onOpen, onLongClick = { menu = true })
+                .padding(4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            FileThumbnail(
+                dir,
+                entry,
+                rememberCategory(entry),
+                Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(1f)
+                    .clip(MaterialTheme.shapes.small)
+                    .background(t.colors.paneAltRow.color),
+            )
+            Text(
+                entry.name,
+                color = t.colors.fg.color,
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.MiddleEllipsis,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+        FileMenu(entry, menu, { menu = false }, onAction)
+    }
+}

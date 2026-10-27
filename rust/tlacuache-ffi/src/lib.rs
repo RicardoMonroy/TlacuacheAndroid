@@ -6,6 +6,7 @@
 uniffi::setup_scaffolding!();
 
 mod favorites;
+mod filetype;
 mod history;
 mod listing;
 mod path_input;

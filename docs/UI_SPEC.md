@@ -56,7 +56,7 @@ Compacta (teléfono vertical)
 - **Barra de ruta**: breadcrumb tocable que empieza en el **volumen** («Interno», «SD», «USB»), nunca en `/storage/emulated/0`. Tocar la zona vacía o Ctrl+L la vuelve editable, con autocompletado (`core::path_input`). Se desplaza horizontalmente si no cabe, mostrando siempre el final.
 - **Vistas**:
   - Lista detallada: columnas visibles según el ancho del panel (nombre siempre; luego edad, tamaño, fecha). Encabezados tocables para ordenar; carpetas siempre primero (`core::sort`).
-  - Íconos: cuadrícula de miniaturas (fotos, videos, PDF) o íconos de tipo; nombre en dos líneas. Pellizcar cambia el tamaño (v0.2).
+  - Íconos: cuadrícula de miniaturas (fotos, videos, PDF) o íconos de tipo; nombre en dos líneas. Pellizcar cambia el tamaño (v0.2). Cada pestaña recuerda su vista; se cambia con ⋮ › Vista de íconos o Ctrl+1/Ctrl+2.
   - Columnas Miller (v0.2, solo expandida).
 - **Edad relativa**: chip (o texto, según el tema) con formato compacto (`ahora`, `12min`, `2h`, `3d`, `3M`, `1a`); colores por bucket según `THEMES.md` §3.
 - **Barra de estado** del panel, al pie: elementos, seleccionados, tamaño seleccionado, espacio libre del volumen («133 GB libres de 256 GB»; del interno, el total nominal que muestra Ajustes, no el del sistema de archivos). En compacta se reduce a «N elementos» o «N seleccionados · tamaño». El espacio se relee con cada lectura de la carpeta.

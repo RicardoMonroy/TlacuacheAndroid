@@ -58,6 +58,8 @@ class TabState(
         val query: String = "",
         /** Ocultos visibles (Ctrl+H); se conserva al navegar. */
         val showHidden: Boolean = false,
+        /** Vista de íconos (Ctrl+2) en vez de lista (Ctrl+1); se conserva al navegar. */
+        val iconView: Boolean = false,
     )
 
     // shortcut: orden fijo hasta los encabezados de orden (A2).
@@ -73,7 +75,7 @@ class TabState(
     private var watch: FolderWatch? = null
 
     private val history = PathHistory(dir.path)
-    private val _ui = MutableStateFlow(uiFor(dir, showHidden = false))
+    private val _ui = MutableStateFlow(uiFor(dir, Ui(dir)))
     val ui: StateFlow<Ui> = _ui.asStateFlow()
     private var job: Job? = null
 
@@ -131,6 +133,8 @@ class TabState(
         return true
     }
 
+    fun setIconView(on: Boolean) = _ui.update { it.copy(iconView = on) }
+
     fun toggleHidden() {
         _ui.update { it.copy(showHidden = !it.showHidden) }
         rearrange()
@@ -168,14 +172,15 @@ class TabState(
     /** Cambia a [dir] sin rastro de la carpeta anterior y la lee. */
     private fun show(dir: File) {
         entries = emptyList()
-        _ui.value = uiFor(dir, _ui.value.showHidden)
+        _ui.value = uiFor(dir, _ui.value)
         if (watch != null) startWatching()
         reload()
     }
 
+    /** Estado de recién llegar a [dir]; de [prev] solo se conservan ocultos y vista. */
     private fun uiFor(
         dir: File,
-        showHidden: Boolean,
+        prev: Ui,
     ): Ui {
         val name = volumeName(dir)
         return Ui(
@@ -186,7 +191,8 @@ class TabState(
             canGoUp = name == null && dir.parentFile != null,
             crumbs = crumbsOf(dir),
             rootLabel = volumeRootOf(dir)?.let(volumeName),
-            showHidden = showHidden,
+            showHidden = prev.showHidden,
+            iconView = prev.iconView,
         )
     }
 

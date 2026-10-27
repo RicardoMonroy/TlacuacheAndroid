@@ -110,26 +110,37 @@ private fun FileRow(
     var menu by remember { mutableStateOf(false) }
     Box {
         RowContent(entry, nowMs, columns, alt, onOpen, onLongPress = { menu = true })
-        // shortcut: menú mínimo por pulsación larga hasta la selección (A3.4) y el menú contextual completo (A3.11).
-        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-            FileAction.entries
-                .filter {
-                    if (entry.isDir) {
-                        it == FileAction.OPEN || it == FileAction.ADD_FAVORITE
-                    } else {
-                        it !=
-                            FileAction.ADD_FAVORITE
-                    }
-                }.forEach { action ->
-                    DropdownMenuItem(
-                        text = { Text(stringResource(action.label)) },
-                        onClick = {
-                            menu = false
-                            onAction(action)
-                        },
-                    )
+        FileMenu(entry, menu, { menu = false }, onAction)
+    }
+}
+
+/** Menú de pulsación larga de un elemento (lista y cuadrícula). */
+@Composable
+internal fun FileMenu(
+    entry: FileEntry,
+    expanded: Boolean,
+    onDismiss: () -> Unit,
+    onAction: (FileAction) -> Unit,
+) {
+    // shortcut: menú mínimo por pulsación larga hasta la selección (A3.4) y el menú contextual completo (A3.11).
+    DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
+        FileAction.entries
+            .filter {
+                if (entry.isDir) {
+                    it == FileAction.OPEN || it == FileAction.ADD_FAVORITE
+                } else {
+                    it !=
+                        FileAction.ADD_FAVORITE
                 }
-        }
+            }.forEach { action ->
+                DropdownMenuItem(
+                    text = { Text(stringResource(action.label)) },
+                    onClick = {
+                        onDismiss()
+                        onAction(action)
+                    },
+                )
+            }
     }
 }
 
@@ -155,15 +166,7 @@ private fun RowContent(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        // shortcut: marca de color por tipo hasta tener íconos (A2.6); carpeta vs. resto.
-        Box(
-            Modifier
-                .size(12.dp)
-                .background(
-                    if (entry.isDir) t.filetypes.folder.color else t.filetypes.other.color,
-                    MaterialTheme.shapes.extraSmall,
-                ),
-        )
+        FileIcon(rememberCategory(entry), 20.dp)
         Text(
             entry.name,
             color = t.colors.fg.color,
