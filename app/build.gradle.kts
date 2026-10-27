@@ -1,11 +1,21 @@
+import javax.inject.Inject
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
 }
 
+// -Ptlacuache.abis=arm64-v8a limita las ABI para iterar rápido.
+val rustAbis =
+    providers
+        .gradleProperty("tlacuache.abis")
+        .map { it.split(',').map(String::trim) }
+        .orElse(listOf("arm64-v8a", "armeabi-v7a", "x86_64"))
+
 android {
     namespace = "io.github.ricardomonroy.tlacuache"
     compileSdk = 37
+    ndkVersion = "28.2.13676358"
 
     defaultConfig {
         // ADR-A12: no se puede cambiar una vez publicado.
@@ -14,6 +24,8 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0-dev"
+        // Solo las ABI que compila tlacuache-ffi; JNA trae más (x86, mips…) que fallarían al cargar el core.
+        ndk { abiFilters += rustAbis.get() }
     }
 
     buildTypes {
@@ -34,6 +46,65 @@ android {
     }
 }
 
+/** Compila tlacuache-ffi con `scripts/build-rust.sh` y deja los .so y los bindings Kotlin en sus salidas. */
+abstract class BuildRustTask
+    @Inject
+    constructor(
+        private val execOps: ExecOperations,
+    ) : DefaultTask() {
+        @get:Input abstract val profile: Property<String>
+
+        @get:Input abstract val abis: ListProperty<String>
+
+        @get:Input abstract val ndkDir: Property<String>
+
+        @get:InputFile abstract val script: RegularFileProperty
+
+        @get:InputFiles
+        @get:PathSensitive(PathSensitivity.RELATIVE)
+        abstract val rustSources: ConfigurableFileCollection
+
+        @get:OutputDirectory abstract val jniLibsDir: DirectoryProperty
+
+        @get:OutputDirectory abstract val kotlinDir: DirectoryProperty
+
+        @TaskAction
+        fun build() {
+            execOps.exec {
+                environment("ANDROID_NDK_HOME", ndkDir.get())
+                commandLine(
+                    listOf(
+                        script.get().asFile.absolutePath,
+                        profile.get(),
+                        jniLibsDir.get().asFile.absolutePath,
+                        kotlinDir.get().asFile.absolutePath,
+                    ) + abis.get(),
+                )
+            }
+        }
+    }
+
+val rustDir = rootProject.layout.projectDirectory.dir("rust")
+
+androidComponents {
+    onVariants { variant ->
+        val name = variant.name.replaceFirstChar(Char::uppercase)
+        val task =
+            tasks.register<BuildRustTask>("buildRust$name") {
+                profile.set(if (variant.buildType == "release") "release" else "debug")
+                abis.set(rustAbis)
+                ndkDir.set(androidComponents.sdkComponents.ndkDirectory.map { it.asFile.absolutePath })
+                script.set(rootProject.layout.projectDirectory.file("scripts/build-rust.sh"))
+                rustSources.from(
+                    rustDir.files("Cargo.toml", "Cargo.lock"),
+                    rustDir.dir("tlacuache-ffi"),
+                )
+            }
+        variant.sources.jniLibs?.addGeneratedSourceDirectory(task, BuildRustTask::jniLibsDir)
+        variant.sources.kotlin?.addGeneratedSourceDirectory(task, BuildRustTask::kotlinDir)
+    }
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
@@ -42,4 +113,6 @@ dependencies {
     implementation(libs.compose.material3)
     implementation(libs.compose.ui.tooling.preview)
     debugImplementation(libs.compose.ui.tooling)
+    // Los bindings de UniFFI cargan libtlacuache_ffi.so con JNA (AAR con sus .so nativos).
+    implementation(libs.jna) { artifact { type = "aar" } }
 }

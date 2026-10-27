@@ -12,6 +12,7 @@ import androidx.compose.material3.Text
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import io.github.ricardomonroy.tlacuache.ffi.coreVersion
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -21,8 +22,8 @@ class MainActivity : ComponentActivity() {
             // shortcut: tema Material por defecto; TlacuacheTheme llega en A0.5.
             MaterialTheme {
                 Surface(Modifier.fillMaxSize()) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text(stringResource(R.string.placeholder_greeting))
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text(stringResource(R.string.placeholder_greeting, coreVersion()))
                     }
                 }
             }
