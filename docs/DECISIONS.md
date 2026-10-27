@@ -16,6 +16,8 @@ Formato: contexto → decisión → consecuencias. Añadir nuevas al final con n
 - **Contexto**: cada llamada de Kotlin a Rust por JNA cuesta del orden de microsegundos. Ordenar 10 000 entradas con un comparador que cruza la FFI haría ~130 000 llamadas.
 - **Decisión**: la FFI recibe y devuelve colecciones: `arrange(entries, sort, query, show_hidden)` devuelve índices en una sola llamada. Los tipos se definen como registros UniFFI en `tlacuache-ffi` con conversiones `From` hacia el core; el core no se anota con UniFFI.
 - **Consecuencias**: rendimiento independiente del puente; `tlacuache-core` sigue sin saber de Android. Hay que mantener las conversiones cuando cambien los tipos del core.
+- **Medido (2026-10-27)**: `arrange` con 10 000 entradas tarda ~10 ms en Rust release y ~110 ms de punta a punta desde la JVM con el core en debug (JNA + serialización incluidas).
+- **Matiz**: una función barata llamada por **fila visible** (p. ej. `age()` al pintar la columna «Edad») está permitida; lo prohibido es lo que crece con el tamaño del listado.
 
 ## ADR-A04 — Acceso a archivos: «todos los archivos» en Android 11+, almacenamiento heredado en Android 10; sin root
 - **Contexto**: un explorador de doble panel necesita listar y operar con rutas reales y rápido. SAF obliga a elegir carpeta por carpeta y es lento en carpetas grandes. El autor no quiere root.

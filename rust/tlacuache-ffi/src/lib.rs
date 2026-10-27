@@ -5,6 +5,7 @@
 
 uniffi::setup_scaffolding!();
 
+mod listing;
 mod theme;
 
 /// Versión de la FFI y app-id del core enlazado; prueba de que el puente funciona.
