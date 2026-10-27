@@ -39,6 +39,8 @@ scripts/build-rust.sh           # cargo-ndk + bindings Kotlin de UniFFI (Gradle 
 ./gradlew lint ktlintCheck      # Android Lint + estilo Kotlin
 scripts/check.sh                # cargo fmt --check + clippy de la ffi + lint + ktlint + test
 adb shell getprop ro.product.cpu.abi   # ABI de un dispositivo
+export ANDROID_SERIAL=<serial>          # sin esto, installDebug instala en TODOS los dispositivos conectados
+ANDROID_AVD_HOME=~/.config/.android/avd ~/Android/Sdk/emulator/emulator -avd Tlacuache_API29   # emulador Android 10
 ```
 
 Definición de "terminado" para cualquier tarea: compila, `scripts/check.sh` en verde, criterio de aceptación de la tarea en `ROADMAP.md` cumplido y probado en el dispositivo que indique la tarea. Marca la casilla `[x]` en el roadmap al terminar.
