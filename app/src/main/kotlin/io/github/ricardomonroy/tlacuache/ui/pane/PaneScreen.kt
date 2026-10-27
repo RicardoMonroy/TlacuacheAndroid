@@ -47,6 +47,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.isAltPressed
 import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.isMetaPressed
+import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
@@ -67,6 +68,7 @@ import io.github.ricardomonroy.tlacuache.ffi.FileEntry
 import io.github.ricardomonroy.tlacuache.ffi.FilterKey
 import io.github.ricardomonroy.tlacuache.intents.FileIntents
 import io.github.ricardomonroy.tlacuache.state.BackStep
+import io.github.ricardomonroy.tlacuache.state.PaneState
 import io.github.ricardomonroy.tlacuache.state.PathInput
 import io.github.ricardomonroy.tlacuache.state.TabState
 import io.github.ricardomonroy.tlacuache.ui.theme.TlacuacheTheme
@@ -74,11 +76,31 @@ import io.github.ricardomonroy.tlacuache.ui.theme.color
 import kotlinx.coroutines.launch
 import java.io.File
 
-/** Un panel con su carpeta actual. Relee al volver a primer plano (ARCHITECTURE §6). */
+/** Un panel: su tira de pestañas y la pestaña activa (ARCHITECTURE §5). */
 @Composable
 fun PaneScreen(
+    pane: PaneState,
+    pathInput: PathInput,
+) {
+    val tabs by pane.tabs.collectAsStateWithLifecycle()
+    // Cada pestaña tiene su propio estado de UI (ruta en edición, filtro abierto, desplazamiento).
+    key(tabs.current) {
+        TabScreen(
+            tabs.current,
+            pathInput,
+            header = { TabStrip(tabs, pane) },
+            paneKeys = { handleTabKey(it, pane) },
+        )
+    }
+}
+
+/** Contenido de una pestaña. Relee al volver a primer plano y vigila su carpeta (ARCHITECTURE §6). */
+@Composable
+private fun TabScreen(
     tab: TabState,
     pathInput: PathInput,
+    header: @Composable () -> Unit,
+    paneKeys: (KeyEvent) -> Boolean,
 ) {
     val ui by tab.ui.collectAsStateWithLifecycle()
     val t = TlacuacheTheme.tokens
@@ -174,6 +196,10 @@ fun PaneScreen(
                         false
                     }
 
+                    paneKeys(event) -> {
+                        true
+                    }
+
                     paneFocused && (event.key == Key.DirectionDown || event.key == Key.DirectionUp) -> {
                         focusManager.moveFocus(FocusDirection.Enter)
                     }
@@ -203,11 +229,15 @@ fun PaneScreen(
                 paneHasFocus = it.hasFocus
             }.focusable(),
     ) {
+        Column(
+            Modifier.fillMaxWidth().background(t.colors.headerBg.color).windowInsetsPadding(WindowInsets.statusBars),
+        ) {
+            header()
+        }
         Row(
             Modifier
                 .fillMaxWidth()
                 .background(t.colors.headerBg.color)
-                .windowInsetsPadding(WindowInsets.statusBars)
                 .padding(horizontal = 4.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -297,6 +327,21 @@ fun PaneScreen(
             )
         }
     }
+}
+
+/** Ctrl+T, Ctrl+W y Ctrl+Tab / Ctrl+Shift+Tab (UI_SPEC §8). */
+private fun handleTabKey(
+    event: KeyEvent,
+    pane: PaneState,
+): Boolean {
+    if (!event.isCtrlPressed) return false
+    when (event.key) {
+        Key.T -> pane.openTab()
+        Key.W -> pane.closeTab()
+        Key.Tab -> pane.cycle(if (event.isShiftPressed) -1 else 1)
+        else -> return false
+    }
+    return true
 }
 
 /** Tecla del filtro rápido, o `null` si lleva Ctrl, Alt o Meta (es un atajo) o no escribe nada. */

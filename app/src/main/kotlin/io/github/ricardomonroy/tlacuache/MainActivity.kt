@@ -13,6 +13,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.ricardomonroy.tlacuache.ffi.builtinTheme
 import io.github.ricardomonroy.tlacuache.ffi.defaultThemeId
@@ -55,7 +56,9 @@ private fun App() {
     }
     if (granted) {
         val window = viewModel<WindowViewModel>()
-        PaneScreen(window.tab, window.pathInput)
+        val active by window.activePane.collectAsStateWithLifecycle()
+        // shortcut: un solo panel visible (el activo) hasta los layouts de A2.2.
+        PaneScreen(window.panes[active], window.pathInput)
     } else {
         WelcomeScreen(onGranted = { granted = true })
     }

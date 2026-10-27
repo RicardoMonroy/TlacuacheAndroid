@@ -29,6 +29,7 @@ Trabajar en orden. Cada tarea = un commit. Marcar `[x]` al cumplir el criterio d
 
 ## Hito A2 — Pestañas, doble panel, layouts y barra lateral
 - [ ] **A2.1 Estado de ventana**: `WindowViewModel` con paneles A y B, panel activo, pestañas por panel (Ctrl+T, Ctrl+W, Ctrl+Tab). CA: rotar la pantalla y redimensionar la ventana en **PE** no pierde pestañas ni selección.
+  - Avance (2026-10-27): paneles A y B en `WindowViewModel` (se ve el activo; layouts en A2.2), pestañas por panel con tira propia (+, ✕, tocar), Ctrl+T en la carpeta actual, Ctrl+W (la última no se cierra), Ctrl+Tab y Ctrl+Shift+Tab con vuelta. En **P**: probado y rotar a horizontal conserva pestañas y carpeta activa. Falta **PE** (redimensionar) y la selección (A3.4). Tab para cambiar de panel llega con A2.2.
 - [ ] **A2.2 Layouts adaptativos**: compacta (1 panel + A/B), media y expandida (2 paneles con divisor arrastrable), F3, Tab y acento del panel activo. CA: en **PE**, al estrechar la ventana pasa de 2 paneles a A/B y vuelve, sin perder estado; en **T** vertical y horizontal se ve según UI_SPEC §1.
 - [ ] **A2.3 Barra lateral: lugares y volúmenes**: carpetas estándar, volúmenes con uso de disco, aparición al conectar SD/USB; cajón, riel o permanente según el ancho (F9). CA: conectar una USB en **T** la muestra y quitarla la oculta.
 - [ ] **A2.4 Favoritos**: grupos, añadir desde el menú o arrastrando, reordenar; persistidos en `config.toml` vía core. CA: sobreviven a reiniciar la app.

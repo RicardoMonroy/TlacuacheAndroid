@@ -49,4 +49,8 @@
     </plurals>
     <string name="menu_more">Más opciones</string>
     <string name="menu_show_hidden">Mostrar ocultos</string>
+
+    <!-- Pestañas (A2.1) -->
+    <string name="tab_new">Pestaña nueva</string>
+    <string name="tab_close">Cerrar pestaña</string>
 </resources>

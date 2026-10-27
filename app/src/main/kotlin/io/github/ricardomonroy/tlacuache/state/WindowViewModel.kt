@@ -5,9 +5,12 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import io.github.ricardomonroy.tlacuache.storage.fileObserverWatcher
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import java.io.File
 
-/** Estado de una ventana (ARCHITECTURE §5). Por ahora, una sola pestaña. */
+/** Estado de una ventana (ARCHITECTURE §5): dos paneles con sus pestañas y cuál está activo. */
 class WindowViewModel(
     savedState: SavedStateHandle,
 ) : ViewModel() {
@@ -15,15 +18,29 @@ class WindowViewModel(
     @Suppress("DEPRECATION")
     private val internalRoot: File = Environment.getExternalStorageDirectory().absoluteFile
 
-    val tab =
+    private val startDir = startDir(savedState.get<String>(EXTRA_PATH))
+
+    private fun newTab(dir: File) =
         TabState(
             scope = viewModelScope,
-            dir = startDir(savedState.get<String>(EXTRA_PATH)),
+            dir = dir,
             isVolumeRoot = { it.absoluteFile == internalRoot },
             watcher = fileObserverWatcher,
         )
 
-    override fun onCleared() = tab.stopWatching()
+    /** Paneles A y B: siempre existen los dos, se vean o no (ADR-A08). */
+    val panes = listOf(PaneState(startDir, ::newTab), PaneState(startDir, ::newTab))
+
+    private val _activePane = MutableStateFlow(0)
+    val activePane: StateFlow<Int> = _activePane.asStateFlow()
+
+    fun activate(pane: Int) {
+        if (pane in panes.indices) _activePane.value = pane
+    }
+
+    override fun onCleared() {
+        panes.flatMap { it.tabs.value.list }.forEach(TabState::stopWatching)
+    }
 
     /** Barra de ruta: `~` es la raíz del almacenamiento interno. */
     val pathInput = PathInput(internalRoot)
