@@ -9,6 +9,8 @@ mod favorites;
 mod filetype;
 mod history;
 mod listing;
+mod names;
+mod ops;
 mod path_input;
 mod session;
 mod theme;

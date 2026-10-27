@@ -60,7 +60,7 @@ pub struct Age {
     pub amount: u64,
 }
 
-fn system_time(ms: i64) -> SystemTime {
+pub(crate) fn system_time(ms: i64) -> SystemTime {
     let offset = Duration::from_millis(ms.unsigned_abs());
     if ms >= 0 {
         UNIX_EPOCH + offset

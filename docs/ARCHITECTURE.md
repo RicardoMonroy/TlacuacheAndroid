@@ -82,8 +82,8 @@ Expone **solo lo que la app usa**, con registros propios (UniFFI no puede anotar
 | `sort`, `filter`, `text` | Orden natural con `ñ`/acentos, filtro rápido | `arrange(entries, sort, query, show_hidden) -> Vec<u32>` (índices; una llamada por listado, ADR-A03); `apply_filter_key` |
 | `entry`, `age`, `summary` | Modelo, chips de edad, barra de estado | Registros `FileEntry`, `Age`, `SelectionSummary`; `age(modified_ms, now_ms)` |
 | `history` | Atrás/adelante por pestaña | Objeto `PathHistory` (con `Mutex` interno) |
-| `ops` (`queue`, `conflict`, `undo`) | Cola, estados, progreso, conflictos, deshacer | Objeto `OpQueue`; registros `OpRequest`, `Journal`, `ConflictPolicy`; `undo_request(kind, journal)` |
-| `names`, `bulk_rename` | Validar nombres, «Conservar ambos», renombrado masivo | `validate_name`, `next_free_name(name, is_dir, existing)`, `plan_rename(rule, items)` |
+| `ops` (`queue`, `conflict`, `undo`) | Cola, estados, progreso, conflictos, deshacer | Objetos `OpQueue` (instantánea con `operations()`; `complete(id, journal)` guarda el deshacer de `undo_request`) y `ConflictPolicy`; registros `OpRequest`, `Operation`, `Progress`, `Journal`; `undo_request(kind, journal)`, `replace_allowed`, `newer` |
+| `names`, `bulk_rename` | Validar nombres, «Conservar ambos», renombrado masivo | `validate_name` (devuelve el error como valor), `stem_len`, `next_free_name(name, is_dir, existing)`, `plan_rename(rule, items)` |
 | `filetype` | Categoría para íconos y colores | `classify(name, mime, is_dir)` |
 | `theme`, `theme_catalog` | Temas | `theme_catalog(user_dir) -> Vec<ThemeTokens>` (colores ARGB y flags de `[style]`) |
 | `config`, `favorites`, `session`, `keymap` | Configuración, favoritos, sesión, atajos | Entrada y salida como texto TOML; la E/S de archivos la hace Kotlin (escritura atómica) |
