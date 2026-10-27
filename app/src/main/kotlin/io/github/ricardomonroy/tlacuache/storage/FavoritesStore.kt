@@ -13,8 +13,6 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 
 /**
  * Favoritos guardados en `[[favorites]]` de `config.toml` (ADR-A11). Las reglas (grupos, duplicados,
@@ -73,10 +71,5 @@ class FavoritesStore(
             }
         }
 
-    /** Escribe a un temporal y lo renombra: un corte a mitad no deja el archivo a medias. */
-    private fun write(text: String) {
-        val tmp = File(file.parentFile, "${file.name}.tmp")
-        tmp.writeText(text)
-        Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING)
-    }
+    private fun write(text: String) = writeAtomically(file, text)
 }

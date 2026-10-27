@@ -10,6 +10,7 @@ mod filetype;
 mod history;
 mod listing;
 mod path_input;
+mod session;
 mod theme;
 mod usage;
 

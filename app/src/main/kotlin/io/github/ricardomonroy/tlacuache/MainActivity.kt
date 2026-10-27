@@ -12,7 +12,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.LifecycleResumeEffect
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.setSingletonImageLoaderFactory
 import io.github.ricardomonroy.tlacuache.ffi.builtinTheme
@@ -57,7 +60,10 @@ private fun App() {
         onPauseOrDispose { }
     }
     if (granted) {
-        PaneLayout(viewModel<WindowViewModel>())
+        val window = viewModel<WindowViewModel>()
+        val ready by window.ready.collectAsStateWithLifecycle()
+        LifecycleEventEffect(Lifecycle.Event.ON_STOP) { window.saveSession() }
+        if (ready) PaneLayout(window)
     } else {
         WelcomeScreen(onGranted = { granted = true })
     }

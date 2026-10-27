@@ -8,7 +8,11 @@ import androidx.lifecycle.viewModelScope
 import io.github.ricardomonroy.tlacuache.R
 import io.github.ricardomonroy.tlacuache.ffi.FavoriteGroup
 import io.github.ricardomonroy.tlacuache.ffi.Favorites
+import io.github.ricardomonroy.tlacuache.ffi.SessionPane
+import io.github.ricardomonroy.tlacuache.ffi.SessionState
+import io.github.ricardomonroy.tlacuache.ffi.SessionTab
 import io.github.ricardomonroy.tlacuache.storage.FavoritesStore
+import io.github.ricardomonroy.tlacuache.storage.SessionStore
 import io.github.ricardomonroy.tlacuache.storage.Volume
 import io.github.ricardomonroy.tlacuache.storage.Volumes
 import io.github.ricardomonroy.tlacuache.storage.fileObserverWatcher
@@ -122,7 +126,6 @@ class WindowViewModel(
     /** Tab, alternador A/B en compacta. */
     fun activateOther() = _activePane.update { 1 - it }
 
-    // shortcut: modo dual y divisor viven solo en memoria hasta la sesión (A2.7).
     private val _dual = MutableStateFlow(true)
 
     /** Dos paneles lado a lado cuando la ventana es media o expandida (F3 lo alterna; UI_SPEC §1). */
@@ -141,8 +144,62 @@ class WindowViewModel(
         min: Float,
     ) = _split.update { (it + delta).coerceIn(min, 1 - min) }
 
+    private val sessionStore = SessionStore(File(app.filesDir, "session.toml"))
+    private val _ready = MutableStateFlow(false)
+
+    /** La sesión anterior ya se restauró (o no había); hasta entonces la UI no muestra los paneles. */
+    val ready: StateFlow<Boolean> = _ready.asStateFlow()
+
     init {
         viewModelScope.launch { favoritesStore.load() }
+        viewModelScope.launch {
+            // Una ventana abierta en una carpeta concreta (A4.5) no restaura la sesión.
+            if (savedState.get<String>(EXTRA_PATH) == null) sessionStore.load()?.let(::restore)
+            _ready.value = true
+        }
+    }
+
+    private fun restore(s: SessionState) {
+        _dual.value = s.dualPane
+        _split.value = (s.panesRatio ?: 0.5).toFloat()
+        _sidebarCollapsed.value = !s.sidebarVisible
+        panes.zip(s.panes).forEach { (pane, saved) ->
+            if (saved.tabs.isNotEmpty()) {
+                val tabs =
+                    saved.tabs.map { t ->
+                        newTab(File(t.path)).apply {
+                            setIconView(t.iconView)
+                            if (t.showHidden) toggleHidden()
+                        }
+                    }
+                pane.restore(tabs, saved.selected.toInt())
+            }
+        }
+        activate(s.activePane.toInt())
+    }
+
+    /** Guarda la sesión con `core::session` (al pasar a segundo plano: después el sistema puede matar el proceso). */
+    fun saveSession() {
+        val state =
+            SessionState(
+                dualPane = _dual.value,
+                panesRatio = _split.value.toDouble(),
+                activePane = _activePane.value.toUInt(),
+                sidebarVisible = !_sidebarCollapsed.value,
+                panes =
+                    panes.map { pane ->
+                        val tabs = pane.tabs.value
+                        SessionPane(
+                            tabs.active.toUInt(),
+                            tabs.list.map {
+                                it.ui.value.let { ui ->
+                                    SessionTab(ui.dir.path, ui.iconView, ui.showHidden)
+                                }
+                            },
+                        )
+                    },
+            )
+        viewModelScope.launch { sessionStore.save(state) }
     }
 
     override fun onCleared() {

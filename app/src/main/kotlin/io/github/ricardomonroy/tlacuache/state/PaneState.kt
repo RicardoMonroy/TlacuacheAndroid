@@ -47,6 +47,15 @@ class PaneState(
         }
     }
 
+    /** Sustituye las pestañas por las de una sesión guardada (A2.7); [list] no puede estar vacía. */
+    fun restore(
+        list: List<TabState>,
+        active: Int,
+    ) {
+        _tabs.value.list.forEach(TabState::stopWatching)
+        _tabs.value = Tabs(list, active.coerceIn(list.indices))
+    }
+
     fun select(index: Int) {
         _tabs.update { t -> if (index in t.list.indices) t.copy(active = index) else t }
     }
