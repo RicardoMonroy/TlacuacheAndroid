@@ -9,10 +9,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -52,6 +55,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.key.utf16CodePoint
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.pluralStringResource
@@ -88,7 +92,8 @@ fun PaneScreen(
         TabScreen(
             tabs.current,
             pathInput,
-            header = { TabStrip(tabs, pane) },
+            tabStrip = { TabStrip(tabs, pane) },
+            tabMenu = { TabMenuButton(tabs, pane) },
             paneKeys = { handleTabKey(it, pane) },
         )
     }
@@ -99,9 +104,12 @@ fun PaneScreen(
 private fun TabScreen(
     tab: TabState,
     pathInput: PathInput,
-    header: @Composable () -> Unit,
+    tabStrip: @Composable () -> Unit,
+    tabMenu: @Composable () -> Unit,
     paneKeys: (KeyEvent) -> Boolean,
 ) {
+    // Con poca altura (teléfono en horizontal) el encabezado se reduce a una fila: el contenido manda.
+    val shortHeight = LocalConfiguration.current.screenHeightDp < SHORT_HEIGHT_DP
     val ui by tab.ui.collectAsStateWithLifecycle()
     val t = TlacuacheTheme.tokens
     // En primer plano se vigila la carpeta y se relee al volver (lo cambiado mientras tanto no generó
@@ -190,6 +198,8 @@ private fun TabScreen(
         Modifier
             .fillMaxSize()
             .background(t.colors.paneBg.color)
+            // En horizontal, la cámara frontal queda a un lado: nada debajo de ella.
+            .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))
             .onKeyEvent { event ->
                 when {
                     event.type != KeyEventType.KeyDown -> {
@@ -232,13 +242,13 @@ private fun TabScreen(
         Column(
             Modifier.fillMaxWidth().background(t.colors.headerBg.color).windowInsetsPadding(WindowInsets.statusBars),
         ) {
-            header()
+            if (!shortHeight) tabStrip()
         }
         Row(
             Modifier
                 .fillMaxWidth()
                 .background(t.colors.headerBg.color)
-                .padding(horizontal = 4.dp, vertical = 8.dp),
+                .padding(horizontal = 4.dp, vertical = if (shortHeight) 0.dp else 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             NavButton("‹", R.string.nav_back, ui.canGoBack) { tab.back() }
@@ -247,7 +257,7 @@ private fun TabScreen(
             // shortcut: conteo bajo la ruta hasta la barra de estado (A2.5).
             Column(Modifier.padding(start = 4.dp).weight(1f)) {
                 PathBar(ui, tab, pathInput, editingPath, { editingPath = it }, Modifier.fillMaxWidth())
-                if (!editingPath) {
+                if (!editingPath && !shortHeight) {
                     Text(
                         pluralStringResource(R.plurals.pane_item_count, ui.visible.size, ui.visible.size),
                         color = t.colors.fgMuted.color,
@@ -256,6 +266,7 @@ private fun TabScreen(
                     )
                 }
             }
+            if (shortHeight) tabMenu()
             val filterLabel = stringResource(R.string.filter_open)
             IconButton({ filterOpen = true }, Modifier.semantics { contentDescription = filterLabel }) {
                 SearchGlyph(t.colors.headerFg.color)
@@ -328,6 +339,9 @@ private fun TabScreen(
         }
     }
 }
+
+/** Por debajo de esta altura de ventana el encabezado ocupa una sola fila. */
+private const val SHORT_HEIGHT_DP = 480
 
 /** Ctrl+T, Ctrl+W y Ctrl+Tab / Ctrl+Shift+Tab (UI_SPEC §8). */
 private fun handleTabKey(

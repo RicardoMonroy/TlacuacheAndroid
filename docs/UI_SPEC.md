@@ -12,6 +12,8 @@ El layout se elige con las *window size classes* de Material 3 Adaptive (`curren
 | Media (600–839 dp) | Tablet vertical, teléfono horizontal, plegable abierto | Riel de navegación (íconos) que se expande | 2 lado a lado si `dual_pane` está activo (por defecto sí en horizontal) | Franja central entre paneles + barra inferior contextual |
 | Expandida (≥ 840 dp) | Tablet horizontal, DeX, escritorio de Pixel | Permanente, colapsable (F9), ancho redimensionable | 2 lado a lado, divisor arrastrable | Barra de herramientas superior + franja central |
 
+**Poca altura** (ventana de menos de 480 dp de alto, p. ej. teléfono en horizontal): el contenido manda. El encabezado se reduce a una sola fila de 48 dp: ‹ › ↑, ruta, botón de pestañas (número de pestañas; abre la lista para elegir, cerrar o abrir una nueva), buscar y ⋮. Sin tira de pestañas ni conteo bajo la ruta. Nada se dibuja debajo del recorte de la cámara a los lados.
+
 Columnas Miller (v0.2): solo disponibles en clase expandida.
 
 ```
@@ -46,7 +48,7 @@ Compacta (teléfono vertical)
 ## 2. Panel
 
 - **Panel activo**: el último tocado o con foco; en modo dual se marca con una línea de acento arriba (token `pane_active_border`). Las acciones «al otro panel» usan el otro como destino. En compacta, el alternador A/B cambia el panel visible y activo; el otro conserva su carpeta, pestañas y selección.
-- **Pestañas**: tira propia con pestañas de ancho fijo y título a la izquierda, desplazable. Botón + y menú (Duplicar, Cerrar, Cerrar las demás). En compacta se reemplaza por un botón con el número de pestañas que abre un selector. Clic medio cierra; arrastrar una pestaña la reordena o la pasa al otro panel (expandida).
+- **Pestañas**: tira propia con pestañas de ancho fijo y título a la izquierda, desplazable. Botón + y menú (Duplicar, Cerrar, Cerrar las demás). En compacta y con poca altura se reemplaza por un botón con el número de pestañas que abre un selector. Clic medio cierra; arrastrar una pestaña la reordena o la pasa al otro panel (expandida).
 - **Barra de ruta**: breadcrumb tocable que empieza en el **volumen** («Interno», «SD», «USB»), nunca en `/storage/emulated/0`. Tocar la zona vacía o Ctrl+L la vuelve editable, con autocompletado (`core::path_input`). Se desplaza horizontalmente si no cabe, mostrando siempre el final.
 - **Vistas**:
   - Lista detallada: columnas visibles según el ancho del panel (nombre siempre; luego edad, tamaño, fecha). Encabezados tocables para ordenar; carpetas siempre primero (`core::sort`).

@@ -53,4 +53,8 @@
     <!-- Pestañas (A2.1) -->
     <string name="tab_new">Pestaña nueva</string>
     <string name="tab_close">Cerrar pestaña</string>
+    <plurals name="tab_count">
+        <item quantity="one">%d pestaña abierta</item>
+        <item quantity="other">%d pestañas abiertas</item>
+    </plurals>
 </resources>

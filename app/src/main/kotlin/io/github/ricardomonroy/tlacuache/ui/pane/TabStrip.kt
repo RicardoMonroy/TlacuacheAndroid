@@ -1,6 +1,7 @@
 package io.github.ricardomonroy.tlacuache.ui.pane
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -12,14 +13,21 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
@@ -65,6 +73,68 @@ fun TabStrip(
         val newTab = stringResource(R.string.tab_new)
         IconButton(pane::openTab, Modifier.semantics { contentDescription = newTab }) {
             Text("+", color = t.colors.headerFg.color, style = MaterialTheme.typography.titleLarge)
+        }
+    }
+}
+
+/**
+ * Pestañas cuando no cabe la tira (poca altura; en compacta también, A2.2): un botón con el número de
+ * pestañas que abre la lista para elegir, cerrar o abrir una nueva.
+ */
+@Composable
+fun TabMenuButton(
+    tabs: PaneState.Tabs,
+    pane: PaneState,
+) {
+    val t = TlacuacheTheme.tokens
+    var open by remember { mutableStateOf(false) }
+    val label = pluralStringResource(R.plurals.tab_count, tabs.list.size, tabs.list.size)
+    Box {
+        IconButton({ open = true }, Modifier.semantics { contentDescription = label }) {
+            Text(
+                tabs.list.size.toString(),
+                color = t.colors.headerFg.color,
+                style = MaterialTheme.typography.labelLarge,
+                modifier =
+                    Modifier
+                        .border(1.5.dp, t.colors.headerFg.color, MaterialTheme.shapes.extraSmall)
+                        .padding(horizontal = 7.dp, vertical = 1.dp),
+            )
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            tabs.list.forEachIndexed { index, tab ->
+                val ui by tab.ui.collectAsStateWithLifecycle()
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            if (ui.isVolumeRoot) stringResource(R.string.volume_internal_short) else ui.dir.name,
+                            color = if (index == tabs.active) t.colors.accent.color else t.colors.fg.color,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    },
+                    onClick = {
+                        open = false
+                        pane.select(index)
+                    },
+                    trailingIcon = {
+                        if (tabs.list.size > 1) {
+                            val close = stringResource(R.string.tab_close)
+                            IconButton({ pane.closeTab(index) }, Modifier.semantics { contentDescription = close }) {
+                                Text("✕", color = t.colors.fgMuted.color)
+                            }
+                        }
+                    },
+                )
+            }
+            HorizontalDivider()
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.tab_new)) },
+                onClick = {
+                    open = false
+                    pane.openTab()
+                },
+            )
         }
     }
 }
