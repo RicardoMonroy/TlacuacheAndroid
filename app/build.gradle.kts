@@ -22,7 +22,7 @@ android {
         // ADR-A12: no se puede cambiar una vez publicado.
         applicationId = "io.github.RicardoMonroy.Tlacuache"
         minSdk = 29
-        targetSdk = 36
+        targetSdk = 37
         versionCode = 1
         versionName = "0.1.0-dev"
         // Solo las ABI que compila tlacuache-ffi; JNA trae más (x86, mips…) que fallarían al cargar el core.
@@ -52,8 +52,6 @@ android {
         checkDependencies = true
         disable +=
             listOf(
-                // targetSdk 36 es decisión del autor (CLAUDE.md); se sube a propósito, no por aviso de Lint.
-                "OldTargetApi",
                 // Falso positivo: Lint no evalúa la lista dinámica de abiFilters, que sí incluye x86_64.
                 "ChromeOsAbiSupport",
             )

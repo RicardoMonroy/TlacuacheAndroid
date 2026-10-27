@@ -19,7 +19,7 @@ Proyecto Linux de referencia (solo lectura): `../TlacuacheBrowser` (repositorio 
 ## Stack (no cambiar sin un ADR nuevo)
 
 - Kotlin + Jetpack Compose + Material 3 + Material 3 Adaptive (window size classes)
-- `minSdk 29` (Android 10), `targetSdk 36`, `compileSdk 37` (lo exigen las bibliotecas AndroidX vigentes); JDK 17
+- `minSdk 29` (Android 10), `targetSdk 37` y `compileSdk 37` (Android 17); JDK 17
 - Gradle con Kotlin DSL y catálogo de versiones (`gradle/libs.versions.toml`); se usa el wrapper (`./gradlew`), no un Gradle del sistema
 - Rust: crate `rust/tlacuache-ffi` (UniFFI) que expone `tlacuache-core` a Kotlin; compilada con `cargo-ndk` (NDK 28) para `arm64-v8a`, `armeabi-v7a` y `x86_64`
 - Coroutines + Flow; Coil 3 (imágenes y miniaturas); Media3 (video/audio); `PdfRenderer` del sistema (PDF)
