@@ -3,6 +3,7 @@ import javax.inject.Inject
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.ktlint)
 }
 
 // -Ptlacuache.abis=arm64-v8a limita las ABI para iterar rápido.
@@ -43,6 +44,36 @@ android {
 
     buildFeatures {
         compose = true
+    }
+
+    lint {
+        warningsAsErrors = true
+        abortOnError = true
+        checkDependencies = true
+        disable +=
+            listOf(
+                // targetSdk 36 es decisión del autor (CLAUDE.md); se sube a propósito, no por aviso de Lint.
+                "OldTargetApi",
+                // Falso positivo: Lint no evalúa la lista dinámica de abiFilters, que sí incluye x86_64.
+                "ChromeOsAbiSupport",
+            )
+    }
+
+    testOptions {
+        unitTests.all {
+            // Las pruebas JVM cargan libtlacuache_ffi.so compilada para el host (ARCHITECTURE §2).
+            it.systemProperty("jna.library.path", rootProject.file("rust/target/debug").absolutePath)
+            it.dependsOn("buildRustDebug")
+        }
+    }
+}
+
+ktlint {
+    version.set(libs.versions.ktlint.engine)
+    android.set(true)
+    filter {
+        // Los bindings de UniFFI son generados.
+        exclude { it.file.path.contains("/build/") }
     }
 }
 
@@ -115,4 +146,7 @@ dependencies {
     debugImplementation(libs.compose.ui.tooling)
     // Los bindings de UniFFI cargan libtlacuache_ffi.so con JNA (AAR con sus .so nativos).
     implementation(libs.jna) { artifact { type = "aar" } }
+    // En la JVM, JNA necesita el jar con libjnidispatch para el host.
+    testImplementation(libs.jna)
+    testImplementation(libs.junit)
 }

@@ -9,7 +9,7 @@ Trabajar en orden. Cada tarea = un commit. Marcar `[x]` al cumplir el criterio d
 - [ ] **A0.4 Arranque en dispositivos**: comprobar la ABI de **T** (`adb shell getprop ro.product.cpu.abi`), instalar en **T** y **P**; crear el emulador **E10** (instalar imagen de sistema API 29). CA: la app abre en los tres.
   - Avance (2026-10-27): **P** (Android 17, arm64-v8a) y **E10** (AVD `Tlacuache_API29`, x86_64) muestran el texto del core. Falta **T**: se prueba cuando el autor la conecte.
 - [x] **A0.5 Tema base**: `TlacuacheTheme` con los tokens de `nord` desde `core::theme_catalog`, edge-to-edge, JetBrains Mono empaquetada. CA: fondo y acentos Nord visibles; ningún color en el código (grep).
-- [ ] **A0.6 Calidad**: ktlint, Android Lint con advertencias como error, `scripts/check.sh` (fmt/clippy de la ffi + lint + ktlint + test), pruebas JVM que cargan el core de host. CA: script en verde.
+- [x] **A0.6 Calidad**: ktlint, Android Lint con advertencias como error, `scripts/check.sh` (fmt/clippy de la ffi + lint + ktlint + test), pruebas JVM que cargan el core de host. CA: script en verde.
 
 ## Hito A1 — Un panel que navega
 - [ ] **A1.1 Permisos**: pantalla de bienvenida, `MANAGE_EXTERNAL_STORAGE` (30+) y almacenamiento heredado (29); volver a ella si se revoca. CA: probado en **T**, **P** y **E10**, incluido revocar desde Ajustes.

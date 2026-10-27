@@ -50,7 +50,12 @@ fun TlacuacheTheme(
     val typography = remember(tokens) { if (tokens.style.monoUi) Typography().withFamily(MonoFamily) else Typography() }
     val shapes =
         remember(tokens) {
-            val r = RoundedCornerShape(tokens.style.radius.toInt().dp)
+            val r =
+                RoundedCornerShape(
+                    tokens.style.radius
+                        .toInt()
+                        .dp,
+                )
             Shapes(extraSmall = r, small = r, medium = r, large = r)
         }
     CompositionLocalProvider(LocalThemeTokens provides tokens) {
