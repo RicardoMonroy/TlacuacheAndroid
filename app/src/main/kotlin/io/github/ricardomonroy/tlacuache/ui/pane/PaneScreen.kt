@@ -4,18 +4,19 @@ import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.asPaddingValues
-import androidx.compose.foundation.layout.displayCutout
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -36,6 +37,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -55,10 +57,10 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.key.utf16CodePoint
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -81,40 +83,72 @@ import io.github.ricardomonroy.tlacuache.ui.theme.color
 import kotlinx.coroutines.launch
 import java.io.File
 
-/** Un panel: su tira de pestañas y la pestaña activa (ARCHITECTURE §5). */
+/**
+ * Un panel: su tira de pestañas y la pestaña activa (ARCHITECTURE §5). Tocarlo o darle el foco lo
+ * activa; [switcher] es el alternador A/B cuando solo se ve un panel. [dual] es el estado del modo
+ * dual para el menú, o `null` si la ventana es compacta y no caben dos.
+ */
 @Composable
 fun PaneScreen(
     pane: PaneState,
     pathInput: PathInput,
+    active: Boolean,
+    onActivate: () -> Unit,
+    dual: Boolean?,
+    onToggleDual: () -> Unit,
+    modifier: Modifier = Modifier,
+    switcher: (@Composable () -> Unit)? = null,
 ) {
     val tabs by pane.tabs.collectAsStateWithLifecycle()
-    // Cada pestaña tiene su propio estado de UI (ruta en edición, filtro abierto, desplazamiento).
-    key(tabs.current) {
-        TabScreen(
-            tabs.current,
-            pathInput,
-            tabStrip = { TabStrip(tabs, pane) },
-            tabMenu = { TabMenuButton(tabs, pane) },
-            paneKeys = { handleTabKey(it, pane) },
-        )
+    val activate by rememberUpdatedState(onActivate)
+    Box(
+        modifier.pointerInput(Unit) {
+            // Cualquier toque activa el panel, sin consumirlo: la fila o el botón tocado sigue funcionando.
+            awaitEachGesture {
+                awaitFirstDown(requireUnconsumed = false, pass = PointerEventPass.Initial)
+                activate()
+            }
+        },
+    ) {
+        // Cada pestaña tiene su propio estado de UI (ruta en edición, filtro abierto, desplazamiento).
+        key(tabs.current) {
+            TabScreen(
+                tabs.current,
+                pathInput,
+                Chrome(active, accent = switcher == null, switcher, dual, onToggleDual, activate),
+                tabStrip = { TabStrip(tabs, pane) },
+                tabMenu = { TabMenuButton(tabs, pane) },
+                paneKeys = { handleTabKey(it, pane) },
+            )
+        }
     }
 }
+
+/** Lo que la ventana decide sobre un panel: si está activo, su acento, el alternador y el modo dual. */
+private class Chrome(
+    val active: Boolean,
+    val accent: Boolean,
+    val switcher: (@Composable () -> Unit)?,
+    val dual: Boolean?,
+    val onToggleDual: () -> Unit,
+    val onActivate: () -> Unit,
+)
 
 /** Contenido de una pestaña. Relee al volver a primer plano y vigila su carpeta (ARCHITECTURE §6). */
 @Composable
 private fun TabScreen(
     tab: TabState,
     pathInput: PathInput,
+    chrome: Chrome,
     tabStrip: @Composable () -> Unit,
     tabMenu: @Composable () -> Unit,
     paneKeys: (KeyEvent) -> Boolean,
 ) {
     // Con poca altura (teléfono en horizontal) el encabezado se reduce a una fila: el contenido manda.
-    val shortHeight =
-        with(LocalDensity.current) {
-            LocalWindowInfo.current.containerSize.height
-                .toDp()
-        } < SHORT_HEIGHT
+    val window = windowSize()
+    val shortHeight = window.height < SHORT_HEIGHT
+    // Con un solo panel en compacta, la tira de pestañas cede su sitio al alternador A/B.
+    val compactWidth = window.width < MEDIUM_WIDTH
     val ui by tab.ui.collectAsStateWithLifecycle()
     val t = TlacuacheTheme.tokens
     // En primer plano se vigila la carpeta y se relee al volver (lo cambiado mientras tanto no generó
@@ -170,7 +204,8 @@ private fun TabScreen(
             selectionActive = false,
             canGoBack = ui.canGoBack,
         )
-    BackHandler(enabled = backStep != BackStep.EXIT) {
+    // Con dos paneles, el gesto atrás es del activo.
+    BackHandler(enabled = chrome.active && backStep != BackStep.EXIT) {
         when (backStep) {
             BackStep.CLOSE_MENU -> {
                 editingPath = false
@@ -193,8 +228,8 @@ private fun TabScreen(
     val focus = remember { FocusRequester() }
     var paneHasFocus by remember { mutableStateOf(false) }
     // Tocar un control que luego desaparece (una miga) deja la ventana sin foco y los atajos dejarían de llegar.
-    // shortcut: con un solo panel basta recuperarlo; con dos paneles (A2.2) debe decidirlo la ventana.
-    LaunchedEffect(paneHasFocus) { if (!paneHasFocus) focus.requestFocus() }
+    // Solo el panel activo lo recupera; así Tab y los toques mueven el foco al otro.
+    LaunchedEffect(paneHasFocus, chrome.active) { if (chrome.active && !paneHasFocus) focus.requestFocus() }
     // Con el foco en el panel mismo, ↑/↓ lo pasan a la lista (si no, las flechas no entran a las filas).
     val focusManager = LocalFocusManager.current
     var paneFocused by remember { mutableStateOf(false) }
@@ -203,8 +238,6 @@ private fun TabScreen(
         Modifier
             .fillMaxSize()
             .background(t.colors.paneBg.color)
-            // En horizontal, la cámara frontal queda a un lado: nada debajo de ella.
-            .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))
             .onKeyEvent { event ->
                 when {
                     event.type != KeyEventType.KeyDown -> {
@@ -242,12 +275,36 @@ private fun TabScreen(
             .onFocusChanged {
                 paneFocused = it.isFocused
                 paneHasFocus = it.hasFocus
+                if (it.hasFocus) chrome.onActivate()
             }.focusable(),
     ) {
         Column(
             Modifier.fillMaxWidth().background(t.colors.headerBg.color).windowInsetsPadding(WindowInsets.statusBars),
         ) {
-            if (!shortHeight) tabStrip()
+            // Acento del panel activo con dos paneles (UI_SPEC §2).
+            if (chrome.accent) {
+                val line = if (chrome.active) t.colors.paneActiveBorder else t.colors.headerBg
+                Box(Modifier.fillMaxWidth().height(2.dp).background(line.color))
+            }
+            when {
+                shortHeight -> {}
+
+                chrome.switcher == null -> {
+                    tabStrip()
+                }
+
+                else -> {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        chrome.switcher()
+                        if (compactWidth) {
+                            Spacer(Modifier.weight(1f))
+                            tabMenu()
+                        } else {
+                            Box(Modifier.weight(1f)) { tabStrip() }
+                        }
+                    }
+                }
+            }
         }
         Row(
             Modifier
@@ -271,7 +328,10 @@ private fun TabScreen(
                     )
                 }
             }
-            if (shortHeight) tabMenu()
+            if (shortHeight) {
+                chrome.switcher?.invoke()
+                tabMenu()
+            }
             val filterLabel = stringResource(R.string.filter_open)
             IconButton({ filterOpen = true }, Modifier.semantics { contentDescription = filterLabel }) {
                 SearchGlyph(t.colors.headerFg.color)
@@ -287,6 +347,16 @@ private fun TabScreen(
                             tab.toggleHidden()
                         },
                     )
+                    chrome.dual?.let { dual ->
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.menu_dual_pane)) },
+                            trailingIcon = { Checkbox(checked = dual, onCheckedChange = null) },
+                            onClick = {
+                                moreMenu = false
+                                chrome.onToggleDual()
+                            },
+                        )
+                    }
                 }
             }
         }

@@ -13,13 +13,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.LifecycleResumeEffect
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.ricardomonroy.tlacuache.ffi.builtinTheme
 import io.github.ricardomonroy.tlacuache.ffi.defaultThemeId
 import io.github.ricardomonroy.tlacuache.state.WindowViewModel
 import io.github.ricardomonroy.tlacuache.storage.StorageAccess
-import io.github.ricardomonroy.tlacuache.ui.pane.PaneScreen
+import io.github.ricardomonroy.tlacuache.ui.pane.PaneLayout
 import io.github.ricardomonroy.tlacuache.ui.theme.TlacuacheTheme
 import io.github.ricardomonroy.tlacuache.ui.welcome.WelcomeScreen
 
@@ -55,10 +54,7 @@ private fun App() {
         onPauseOrDispose { }
     }
     if (granted) {
-        val window = viewModel<WindowViewModel>()
-        val active by window.activePane.collectAsStateWithLifecycle()
-        // shortcut: un solo panel visible (el activo) hasta los layouts de A2.2.
-        PaneScreen(window.panes[active], window.pathInput)
+        PaneLayout(viewModel<WindowViewModel>())
     } else {
         WelcomeScreen(onGranted = { granted = true })
     }

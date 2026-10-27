@@ -47,7 +47,7 @@ private val TabWidth = 160.dp
  * Tira de pestañas del panel (UI_SPEC §2): ancho fijo, título a la izquierda, desplazable; tocar
  * selecciona, ✕ cierra (salvo la última), + abre una nueva en la carpeta actual.
  *
- * shortcut: siempre la tira; en compacta será un botón con el número de pestañas (A2.2). Arrastrar y menú, después.
+ * shortcut: arrastrar pestañas y su menú (Duplicar, Cerrar las demás), después.
  */
 @Composable
 fun TabStrip(

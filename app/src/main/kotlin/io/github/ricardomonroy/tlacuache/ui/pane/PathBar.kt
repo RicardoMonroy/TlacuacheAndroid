@@ -86,8 +86,8 @@ private fun Breadcrumb(
 ) {
     val t = TlacuacheTheme.tokens
     val scroll = rememberScrollState()
-    // Siempre se ve el final de la ruta: la carpeta actual.
-    LaunchedEffect(ui.crumbs) { scroll.scrollTo(scroll.maxValue) }
+    // Siempre se ve el final de la ruta, la carpeta actual, también al cambiar el ancho del panel.
+    LaunchedEffect(ui.crumbs, scroll.maxValue) { scroll.scrollTo(scroll.maxValue) }
     Box(modifier.heightIn(min = 48.dp).clickable(onClick = onEmptyTap), contentAlignment = Alignment.CenterStart) {
         Row(Modifier.horizontalScroll(scroll), verticalAlignment = Alignment.CenterVertically) {
             ui.crumbs.forEachIndexed { i, crumb ->

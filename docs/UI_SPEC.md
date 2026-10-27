@@ -4,7 +4,7 @@ Referencia: la distribución y el comportamiento de Tlacuache Browser para Linux
 
 ## 1. Principio: el layout depende de la ventana, no del dispositivo
 
-El layout se elige con las *window size classes* de Material 3 Adaptive (`currentWindowAdaptiveInfo()`), a partir del **ancho de la ventana actual**. Una tablet en vertical, un teléfono en horizontal y una ventana de DeX a medio ancho comparten layout. Al redimensionar la ventana en modo escritorio el layout cambia en vivo, sin recrear el estado (pestañas, selección, desplazamiento, cola de operaciones).
+El layout se elige con los umbrales de las *window size classes* de Material 3 (600 y 840 dp), a partir del **ancho de la ventana actual** (`LocalWindowInfo.containerSize`, no la pantalla). Una tablet en vertical, un teléfono en horizontal y una ventana de DeX a medio ancho comparten layout. Al redimensionar la ventana en modo escritorio el layout cambia en vivo, sin recrear el estado (pestañas, selección, desplazamiento, cola de operaciones).
 
 | Clase de ancho | Ejemplos | Barra lateral | Paneles | Barra de acciones |
 |---|---|---|---|---|
@@ -12,7 +12,9 @@ El layout se elige con las *window size classes* de Material 3 Adaptive (`curren
 | Media (600–839 dp) | Tablet vertical, teléfono horizontal, plegable abierto | Riel de navegación (íconos) que se expande | 2 lado a lado si `dual_pane` está activo (por defecto sí en horizontal) | Franja central entre paneles + barra inferior contextual |
 | Expandida (≥ 840 dp) | Tablet horizontal, DeX, escritorio de Pixel | Permanente, colapsable (F9), ancho redimensionable | 2 lado a lado, divisor arrastrable | Barra de herramientas superior + franja central |
 
-**Poca altura** (ventana de menos de 480 dp de alto, p. ej. teléfono en horizontal): el contenido manda. El encabezado se reduce a una sola fila de 48 dp: ‹ › ↑, ruta, botón de pestañas (número de pestañas; abre la lista para elegir, cerrar o abrir una nueva), buscar y ⋮. Sin tira de pestañas ni conteo bajo la ruta. Nada se dibuja debajo del recorte de la cámara a los lados.
+Con dos paneles, cada uno mide al menos 400 dp (botones y ruta legibles); en un teléfono horizontal el divisor apenas se mueve. «Doble panel» en el menú ⋮ (F3) apaga y enciende el modo dual en media y expandida; apagado se ve un panel con el alternador A/B. En compacta, sobre la fila de navegación va una fila con el alternador A/B y el botón de pestañas.
+
+**Poca altura** (ventana de menos de 480 dp de alto, p. ej. teléfono en horizontal): el contenido manda. El encabezado se reduce a una sola fila de 48 dp: ‹ › ↑, ruta, botón de pestañas (número de pestañas; abre la lista para elegir, cerrar o abrir una nueva), alternador A/B si se ve un solo panel, buscar y ⋮. Sin tira de pestañas ni conteo bajo la ruta. Nada se dibuja debajo del recorte de la cámara a los lados.
 
 Columnas Miller (v0.2): solo disponibles en clase expandida.
 

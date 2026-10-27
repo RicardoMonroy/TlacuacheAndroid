@@ -49,6 +49,9 @@
     </plurals>
     <string name="menu_more">Más opciones</string>
     <string name="menu_show_hidden">Mostrar ocultos</string>
+    <string name="menu_dual_pane">Doble panel</string>
+    <string name="pane_a">Panel A</string>
+    <string name="pane_b">Panel B</string>
 
     <!-- Pestañas (A2.1) -->
     <string name="tab_new">Pestaña nueva</string>
