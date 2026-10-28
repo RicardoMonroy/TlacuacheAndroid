@@ -74,12 +74,15 @@ import io.github.ricardomonroy.tlacuache.R
 import io.github.ricardomonroy.tlacuache.ffi.FileEntry
 import io.github.ricardomonroy.tlacuache.ffi.FilterKey
 import io.github.ricardomonroy.tlacuache.ffi.OpKind
+import io.github.ricardomonroy.tlacuache.ffi.OpRequest
+import io.github.ricardomonroy.tlacuache.ffi.nextFreeName
 import io.github.ricardomonroy.tlacuache.intents.FileIntents
 import io.github.ricardomonroy.tlacuache.state.BackStep
 import io.github.ricardomonroy.tlacuache.state.PaneState
 import io.github.ricardomonroy.tlacuache.state.PathInput
 import io.github.ricardomonroy.tlacuache.state.TabState
 import io.github.ricardomonroy.tlacuache.ui.ops.DeleteConfirmation
+import io.github.ricardomonroy.tlacuache.ui.ops.NameDialog
 import io.github.ricardomonroy.tlacuache.ui.theme.TlacuacheTheme
 import io.github.ricardomonroy.tlacuache.ui.theme.color
 import kotlinx.coroutines.launch
@@ -101,6 +104,7 @@ fun PaneScreen(
     onAddFavorite: (File) -> Unit,
     onTransfer: (OpKind, List<File>) -> Unit,
     onRemove: (OpKind, List<File>) -> Unit,
+    onRun: (OpRequest) -> Unit,
     modifier: Modifier = Modifier,
     /** Letra del otro panel cuando solo se ve uno: la barra de la selección dice «Copiar a B». */
     otherPane: String? = null,
@@ -132,6 +136,7 @@ fun PaneScreen(
                     onAddFavorite,
                     onTransfer,
                     onRemove,
+                    onRun,
                     otherPane,
                 ),
                 tabStrip = { TabStrip(tabs, pane) },
@@ -155,6 +160,8 @@ private class Chrome(
     val onTransfer: (OpKind, List<File>) -> Unit,
     /** Papelera o borrado permanente (este, ya confirmado). */
     val onRemove: (OpKind, List<File>) -> Unit,
+    /** Renombrar y crear (A3.7). */
+    val onRun: (OpRequest) -> Unit,
     val otherPane: String?,
 )
 
@@ -187,6 +194,8 @@ private fun TabScreen(
     var moreMenu by remember { mutableStateOf(false) }
     // Borrar permanentemente siempre pide confirmación (CLAUDE.md, regla 6).
     var confirmDelete by remember { mutableStateOf<List<File>?>(null) }
+    // Diálogo de nombre abierto: renombrar este elemento, o crear una carpeta o un archivo vacío.
+    var naming by remember { mutableStateOf<Naming?>(null) }
     val context = LocalContext.current
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -199,7 +208,11 @@ private fun TabScreen(
     val act: (FileEntry, FileAction) -> Unit = act@{ entry, action ->
         val file = File(ui.dir, entry.name)
         val targets = (if (entry.name in ui.selected) ui.selection else listOf(entry)).map { File(ui.dir, it.name) }
-        val removes = action == FileAction.MOVE_TO_OTHER || action == FileAction.TRASH || action == FileAction.DELETE
+        val removes =
+            action == FileAction.MOVE_TO_OTHER ||
+                action == FileAction.RENAME ||
+                action == FileAction.TRASH ||
+                action == FileAction.DELETE
         // Teclas y menús pasan por aquí: una carpeta protegida no se mueve ni se borra (ADR-A06).
         if (removes && targets.any { ui.isProtected(it.name) }) {
             scope.launch { snackbar.showSnackbar(protectedMessage) }
@@ -221,6 +234,11 @@ private fun TabScreen(
 
                 action == FileAction.DELETE -> {
                     confirmDelete = targets
+                    true
+                }
+
+                action == FileAction.RENAME -> {
+                    naming = Naming(OpKind.RENAME, entry.name, entry.isDir)
                     true
                 }
 
@@ -249,6 +267,44 @@ private fun TabScreen(
         if (!started) scope.launch { snackbar.showSnackbar(noApp) }
     }
     val currentAct by rememberUpdatedState(act)
+    naming?.let { n ->
+        NameDialog(
+            n.title,
+            n.initial,
+            n.isDir,
+            ui.dir,
+            n.kind == OpKind.RENAME,
+            onDismiss = { naming = null },
+        ) { name ->
+            val target = File(ui.dir, name)
+            chrome.onRun(
+                when (n.kind) {
+                    OpKind.RENAME -> {
+                        OpRequest(
+                            OpKind.RENAME,
+                            listOf(File(ui.dir, n.initial).path),
+                            target.path,
+                            emptyList(),
+                        )
+                    }
+
+                    else -> {
+                        OpRequest(n.kind, listOf(target.path), null, emptyList())
+                    }
+                },
+            )
+            tab.clearSelection()
+            naming = null
+        }
+    }
+    val newFolderName = stringResource(R.string.new_folder_name)
+    val newFileName = stringResource(R.string.new_file_name)
+    // Nombre libre en esta carpeta («Carpeta nueva (2)»), con las reglas del core.
+    val startNew: (Boolean) -> Unit = { directory ->
+        val base = if (directory) newFolderName else newFileName
+        val name = nextFreeName(base, directory, ui.visible.map { it.name })
+        naming = Naming(if (directory) OpKind.MKDIR else OpKind.CREATE_FILE, name, directory)
+    }
     confirmDelete?.let { targets ->
         DeleteConfirmation(targets.size, onDismiss = { confirmDelete = null }) {
             chrome.onRemove(OpKind.DELETE, targets)
@@ -328,6 +384,22 @@ private fun TabScreen(
                             ui.selection.first(),
                             if (event.isShiftPressed) FileAction.DELETE else FileAction.TRASH,
                         )
+                        true
+                    }
+
+                    // F2 renombra lo seleccionado (uno); F7 o Ctrl+Shift+N, carpeta nueva; Ctrl+Alt+N, archivo (UI_SPEC §8).
+                    event.key == Key.F2 && ui.selected.size == 1 -> {
+                        currentAct(ui.selection.single(), FileAction.RENAME)
+                        true
+                    }
+
+                    event.key == Key.F7 || (event.isCtrlPressed && event.isShiftPressed && event.key == Key.N) -> {
+                        startNew(true)
+                        true
+                    }
+
+                    event.isCtrlPressed && event.isAltPressed && event.key == Key.N -> {
+                        startNew(false)
                         true
                     }
 
@@ -448,6 +520,20 @@ private fun TabScreen(
                             onClick = {
                                 moreMenu = false
                                 tab.setIconView(!ui.iconView)
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.new_folder)) },
+                            onClick = {
+                                moreMenu = false
+                                startNew(true)
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.new_file)) },
+                            onClick = {
+                                moreMenu = false
+                                startNew(false)
                             },
                         )
                         DropdownMenuItem(
@@ -632,4 +718,19 @@ private fun Message(
             Button(onClick = onRetry) { Text(stringResource(R.string.pane_retry)) }
         }
     }
+}
+
+/** Diálogo de nombre: renombrar [initial], o crear con ese nombre propuesto. */
+private class Naming(
+    val kind: OpKind,
+    val initial: String,
+    val isDir: Boolean,
+) {
+    val title: Int
+        get() =
+            when (kind) {
+                OpKind.RENAME -> R.string.action_rename
+                OpKind.MKDIR -> R.string.new_folder
+                else -> R.string.new_file
+            }
 }

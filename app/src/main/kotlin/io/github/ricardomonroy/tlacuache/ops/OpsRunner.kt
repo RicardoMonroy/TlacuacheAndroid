@@ -59,6 +59,7 @@ class OpsRunner(
         SIZE_MISMATCH,
         NO_TRASH,
         NOT_IN_TRASH,
+        EXISTS,
         UNSUPPORTED,
         IO,
     }
@@ -89,6 +90,9 @@ class OpsRunner(
                     OpKind.TRASH -> trashAll()
                     OpKind.DELETE -> deleteAll()
                     OpKind.UNTRASH -> untrashAll()
+                    OpKind.RENAME -> rename()
+                    OpKind.MKDIR -> create(directory = true)
+                    OpKind.CREATE_FILE -> create(directory = false)
                     else -> throw FailedException(Failure.UNSUPPORTED)
                 }
             }
@@ -113,7 +117,44 @@ class OpsRunner(
         val trashed = mutableListOf<String>()
         val dest: File get() = target ?: throw FailedException(Failure.UNSUPPORTED)
 
-        fun journal() = Journal(pairs, merged, trashed, emptyList())
+        val created = mutableListOf<String>()
+
+        fun journal() = Journal(pairs, merged, trashed, created)
+
+        /** Renombrar en su carpeta: [dest] es el elemento ya renombrado. El diálogo validó el nombre con el core. */
+        fun rename(): Journal {
+            val src = sources.single()
+            if (Protected.cannotRemove(src, roots)) throw FailedException(Failure.PROTECTED, src.path)
+            val to = dest
+            if (to.exists()) throw FailedException(Failure.EXISTS, to.path)
+            try {
+                atomicMove(src.toPath(), to.toPath())
+            } catch (e: IOException) {
+                throw FailedException(Failure.IO, src.path, e)
+            }
+            pairs += MovedItem(src.path, to.path)
+            changed(src)
+            done(to)
+            return journal()
+        }
+
+        /** Carpeta o archivo vacío nuevo; deshacer lo manda a la papelera. */
+        fun create(directory: Boolean): Journal {
+            val item = sources.single()
+            val parent = item.parentFile ?: throw FailedException(Failure.IO, item.path)
+            if (Protected.cannotWriteInto(parent, roots)) throw FailedException(Failure.READ_ONLY_DEST, parent.path)
+            if (item.exists()) throw FailedException(Failure.EXISTS, item.path)
+            val ok =
+                try {
+                    if (directory) item.mkdir() else item.createNewFile()
+                } catch (e: IOException) {
+                    throw FailedException(Failure.IO, item.path, e)
+                }
+            if (!ok) throw FailedException(Failure.IO, item.path)
+            created += item.absolutePath
+            done(item)
+            return journal()
+        }
 
         /** A la papelera de su volumen (renombrado instantáneo); deshacer los devuelve. */
         fun trashAll(): Journal {

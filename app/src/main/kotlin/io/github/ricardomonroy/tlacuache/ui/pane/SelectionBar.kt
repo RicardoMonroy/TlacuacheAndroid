@@ -33,7 +33,6 @@ import io.github.ricardomonroy.tlacuache.ui.theme.color
  * Barra de la selección (UI_SPEC §4): ✕ sale del modo selección, el número de seleccionados, «Todo» y ⋯ con
  * las acciones que valen para lo seleccionado.
  *
- * shortcut: Renombrar llega con A3.6.
  */
 @Composable
 fun SelectionBar(
@@ -124,6 +123,9 @@ fun SelectionActions(
             TextButton({ onAction(FileAction.SHARE) }) { Text(stringResource(R.string.action_share)) }
         }
         if (!ui.selectionProtected) {
+            if (ui.selected.size == 1) {
+                TextButton({ onAction(FileAction.RENAME) }) { Text(stringResource(R.string.action_rename)) }
+            }
             TextButton({ onAction(FileAction.TRASH) }) { Text(stringResource(R.string.trash_title)) }
         }
     }

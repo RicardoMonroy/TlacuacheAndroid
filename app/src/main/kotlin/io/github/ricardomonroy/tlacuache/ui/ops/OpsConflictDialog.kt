@@ -98,6 +98,7 @@ fun finishedMessage(op: Operation): Int =
                 OpsRunner.Failure.SIZE_MISMATCH -> R.string.ops_failed_size
                 OpsRunner.Failure.NO_TRASH -> R.string.ops_failed_no_trash
                 OpsRunner.Failure.NOT_IN_TRASH -> R.string.ops_failed_not_in_trash
+                OpsRunner.Failure.EXISTS -> R.string.name_exists
                 else -> R.string.ops_failed_io
             }
         }
@@ -112,6 +113,8 @@ fun finishedMessage(op: Operation): Int =
                 OpKind.TRASH -> R.string.ops_done_trash
                 OpKind.DELETE -> R.string.ops_done_delete
                 OpKind.UNTRASH -> R.string.ops_done_untrash
+                OpKind.RENAME -> R.string.ops_done_rename
+                OpKind.MKDIR, OpKind.CREATE_FILE -> R.string.ops_done_create
                 else -> R.string.ops_done_copy
             }
         }

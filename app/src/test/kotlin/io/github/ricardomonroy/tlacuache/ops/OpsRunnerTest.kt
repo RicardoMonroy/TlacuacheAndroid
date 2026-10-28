@@ -218,6 +218,31 @@ class OpsRunnerTest {
         expectFailure(OpsRunner.Failure.PROTECTED) { run(op(OpKind.TRASH, File(root, "DCIM").apply { mkdir() })) }
     }
 
+    @Test
+    fun renameAndCreateWithUndoRequests() {
+        val a = file(src, "a.txt", 2)
+        val renamed = File(src, "b.txt")
+        val journal = run(op(OpKind.RENAME, a, dest = renamed))
+        assertFalse(a.exists())
+        assertTrue(renamed.exists())
+        assertEquals(listOf(MovedItem(a.path, renamed.path)), journal.pairs)
+        expectFailure(
+            OpsRunner.Failure.EXISTS,
+        ) { run(op(OpKind.RENAME, renamed, dest = File(src, "Álbum").apply { mkdir() })) }
+        expectFailure(OpsRunner.Failure.PROTECTED) {
+            run(op(OpKind.RENAME, File(root, "DCIM").apply { mkdir() }, dest = File(root, "Fotos")))
+        }
+
+        val folder = File(src, "Carpeta nueva")
+        assertEquals(listOf(folder.absolutePath), run(op(OpKind.MKDIR, folder)).created)
+        assertTrue(folder.isDirectory)
+        val empty = File(src, "Archivo nuevo.txt")
+        run(op(OpKind.CREATE_FILE, empty))
+        assertEquals(0L, empty.length())
+        expectFailure(OpsRunner.Failure.EXISTS) { run(op(OpKind.MKDIR, folder)) }
+        expectFailure(OpsRunner.Failure.READ_ONLY_DEST) { run(op(OpKind.MKDIR, File(root, "Android/data/x"))) }
+    }
+
     private fun expectFailure(
         failure: OpsRunner.Failure,
         block: () -> Unit,

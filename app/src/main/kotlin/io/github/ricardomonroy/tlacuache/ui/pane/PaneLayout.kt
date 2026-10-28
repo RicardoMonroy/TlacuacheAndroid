@@ -79,6 +79,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.ricardomonroy.tlacuache.R
 import io.github.ricardomonroy.tlacuache.ffi.OpKind
+import io.github.ricardomonroy.tlacuache.ffi.OpRequest
 import io.github.ricardomonroy.tlacuache.ops.OpsRepository
 import io.github.ricardomonroy.tlacuache.state.WindowViewModel
 import io.github.ricardomonroy.tlacuache.ui.ops.OpsConflictDialog
@@ -159,6 +160,10 @@ fun PaneLayout(window: WindowViewModel) {
     val remove: (OpKind, List<File>) -> Unit = { kind, files ->
         askNotifications()
         window.remove(kind, files)
+    }
+    val run: (OpRequest) -> Unit = { request ->
+        askNotifications()
+        OpsRepository.enqueue(context, request)
     }
     if (showTrash) TrashScreen(onClose = { showTrash = false }, run = remove)
     // Franja central y F5/F6: la selección del panel activo al otro (UI_SPEC §4).
@@ -259,6 +264,7 @@ fun PaneLayout(window: WindowViewModel) {
                                 onAddFavorite = window::addFavorite,
                                 onTransfer = { kind, files -> transfer(kind, files, 1 - i) },
                                 onRemove = remove,
+                                onRun = run,
                                 modifier = Modifier.weight(if (i == 0) shownSplit else 1 - shownSplit),
                             )
                         }
@@ -277,6 +283,7 @@ fun PaneLayout(window: WindowViewModel) {
                             onAddFavorite = window::addFavorite,
                             onTransfer = { kind, files -> transfer(kind, files, 1 - active) },
                             onRemove = remove,
+                            onRun = run,
                             otherPane = if (active == 0) "B" else "A",
                             modifier = Modifier.weight(1f),
                         )
