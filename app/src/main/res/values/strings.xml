@@ -29,7 +29,7 @@
     <string name="sidebar_favorites">Favoritos</string>
     <string name="favorites_default_group">Favoritos</string>
     <string name="favorites_empty">Añade carpetas con ⋮ › Añadir a favoritos.</string>
-    <string name="favorites_save_error">No se pudieron guardar los favoritos.</string>
+    <string name="favorites_save_error">No se pudieron guardar los favoritos. Revisa que haya espacio libre e inténtalo de nuevo.</string>
     <string name="favorite_add">Añadir a favoritos</string>
     <string name="favorite_added">Añadido a favoritos</string>
     <string name="favorite_exists">Ya está en favoritos</string>
@@ -53,8 +53,8 @@
     <string name="place_music">Música</string>
     <string name="place_sounds">Sonidos</string>
     <string name="place_recordings">Grabaciones</string>
-    <string name="path_not_a_folder">Esa carpeta no existe.</string>
-    <string name="path_outside_storage">Esa ruta está fuera de tu almacenamiento.</string>
+    <string name="path_not_a_folder">Esa carpeta no existe. Revisa la ruta.</string>
+    <string name="path_outside_storage">Esa ruta está fuera de tu almacenamiento: Tlacuache solo abre tus carpetas y volúmenes.</string>
     <string name="column_name">Nombre</string>
     <string name="column_size">Tamaño</string>
     <string name="column_modified">Modificado</string>
@@ -62,7 +62,7 @@
     <string name="sort_ascending">Orden ascendente</string>
     <string name="sort_descending">Orden descendente</string>
     <string name="pane_empty">Aquí no hay nada… ni para el tlacuache.</string>
-    <string name="pane_read_error">No se pudo leer esta carpeta.</string>
+    <string name="pane_read_error">No se pudo leer esta carpeta. Si está en una tarjeta o memoria USB, revisa que siga conectada.</string>
     <string name="pane_retry">Reintentar</string>
 
     <!-- Edad compacta (THEMES.md §3) -->
@@ -77,12 +77,12 @@
     <string name="action_open">Abrir</string>
     <string name="action_open_with">Abrir con…</string>
     <string name="action_share">Compartir</string>
-    <string name="open_no_app">No hay una app para abrir este archivo.</string>
+    <string name="open_no_app">No hay una app para abrir este archivo. Prueba con Abrir con… o instala una que lo abra.</string>
 
     <!-- Filtro rápido y ocultos (A1.7) -->
     <string name="filter_open">Filtrar esta carpeta</string>
     <string name="filter_clear">Quitar filtro</string>
-    <string name="filter_no_matches">Nada coincide con el filtro.</string>
+    <string name="filter_no_matches">Ni escarbando lo encontramos.</string>
     <plurals name="filter_matches">
         <item quantity="one">%d coincidencia</item>
         <item quantity="other">%d coincidencias</item>
@@ -117,7 +117,7 @@
     <string name="prefs_view_icons">Íconos</string>
     <string name="prefs_section_look">Aspecto</string>
     <string name="prefs_density">Alto de las filas</string>
-    <string name="prefs_density_auto">Auto: compactas con ratón, cómodas con el dedo</string>
+    <string name="prefs_density_auto">Auto: compactas con mouse, cómodas con el dedo</string>
     <string name="prefs_density_comfortable">Cómodas</string>
     <string name="prefs_density_compact">Compactas</string>
     <string name="prefs_section_device">Este dispositivo</string>
@@ -131,9 +131,9 @@
     <string name="prefs_import">Importar config.toml…</string>
     <string name="prefs_import_invalid">No es un config.toml válido</string>
     <string name="prefs_import_done">Configuración importada</string>
-    <string name="prefs_import_failed">No se pudo leer el archivo</string>
+    <string name="prefs_import_failed">No se pudo leer el archivo. Elige otro.</string>
     <string name="prefs_export_done">Configuración exportada</string>
-    <string name="prefs_export_failed">No se pudo guardar el archivo</string>
+    <string name="prefs_export_failed">No se pudo guardar el archivo. Elige otra carpeta.</string>
     <string name="trash_confirm_title">¿Enviar a la papelera?</string>
     <plurals name="trash_confirm_text">
         <item quantity="one">%d elemento irá a la papelera. Se puede restaurar durante 30 días.</item>
@@ -228,7 +228,7 @@
     <string name="ops_done_delete">Borrado permanentemente</string>
     <string name="ops_done_untrash">Restaurado</string>
     <string name="ops_undo">Deshacer</string>
-    <string name="ops_failed_no_trash">No se pudo enviar a la papelera (¿volumen de solo lectura?).</string>
+    <string name="ops_failed_no_trash">No se pudo enviar a la papelera: este volumen no deja escribir. Revisa que la tarjeta no esté bloqueada.</string>
     <string name="ops_failed_not_in_trash">Ya no está en la papelera.</string>
     <string name="action_trash">Enviar a la papelera</string>
     <string name="action_delete">Borrar permanentemente</string>
@@ -257,7 +257,7 @@
     <string name="name_reserved">«.» y «..» no son nombres válidos.</string>
     <string name="name_slash">El nombre no puede contener «/».</string>
     <string name="name_nul">El nombre contiene un carácter no válido.</string>
-    <string name="name_too_long">El nombre es demasiado largo (máximo 255 bytes).</string>
+    <string name="name_too_long">El nombre es demasiado largo. Acórtalo.</string>
     <string name="name_exists">Ya hay un elemento con ese nombre aquí.</string>
     <string name="ops_title">Operaciones</string>
     <string name="ops_clear">Limpiar terminadas</string>
@@ -280,9 +280,9 @@
     <string name="ops_cancelled">Operación cancelada</string>
     <string name="ops_failed_into_itself">No se puede copiar ni mover una carpeta dentro de sí misma.</string>
     <string name="ops_failed_protected">Las carpetas del sistema no se pueden mover, renombrar ni borrar.</string>
-    <string name="ops_failed_read_only">En esta carpeta no se puede escribir.</string>
-    <string name="ops_failed_size">La copia no quedó completa; se descartó.</string>
-    <string name="ops_failed_io">No se pudo completar la operación (sin espacio, sin permiso o el volumen se retiró).</string>
+    <string name="ops_failed_read_only">En esta carpeta no se puede escribir. Elige otro destino.</string>
+    <string name="ops_failed_size">La copia no quedó completa y se descartó. Revisa el espacio libre y vuelve a intentarlo.</string>
+    <string name="ops_failed_io">No se pudo completar la operación: falta espacio o permiso, o se retiró el volumen. Revisa el destino y vuelve a intentarlo.</string>
     <string name="conflict_title">«%1$s» ya existe</string>
     <string name="conflict_current">En el destino</string>
     <string name="conflict_incoming">El que llega</string>

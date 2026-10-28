@@ -122,7 +122,8 @@ private fun OpsDetail(
                                 op.status(volumeName),
                                 color = (if (op.state is OpState.Failed) t.colors.error else t.colors.fgMuted).color,
                                 style = MaterialTheme.typography.bodySmall,
-                                maxLines = 1,
+                                // Un error dice qué pasó y qué hacer (BRAND §6): no se corta.
+                                maxLines = if (op.state is OpState.Failed) 3 else 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
                         }
