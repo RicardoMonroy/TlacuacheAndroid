@@ -83,6 +83,7 @@ import io.github.ricardomonroy.tlacuache.ffi.OpRequest
 import io.github.ricardomonroy.tlacuache.ops.OpsRepository
 import io.github.ricardomonroy.tlacuache.state.WindowViewModel
 import io.github.ricardomonroy.tlacuache.ui.ops.OpsConflictDialog
+import io.github.ricardomonroy.tlacuache.ui.ops.OpsIndicator
 import io.github.ricardomonroy.tlacuache.ui.ops.finishedMessage
 import io.github.ricardomonroy.tlacuache.ui.sidebar.Sidebar
 import io.github.ricardomonroy.tlacuache.ui.sidebar.SidebarItems
@@ -222,7 +223,10 @@ fun PaneLayout(window: WindowViewModel) {
                     // En horizontal, la cámara frontal queda a un lado: nada debajo de ella.
                     .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))
                     .onKeyEvent { event ->
-                        if (event.type == KeyEventType.KeyDown && event.key == Key.F9) {
+                        if (event.type == KeyEventType.KeyDown && event.isCtrlPressed && event.key == Key.Z) {
+                            OpsRepository.undoLast(context)
+                            true
+                        } else if (event.type == KeyEventType.KeyDown && event.key == Key.F9) {
                             if (permanentFits) window.toggleSidebar() else toggleDrawer()
                             true
                         } else {
@@ -292,6 +296,12 @@ fun PaneLayout(window: WindowViewModel) {
             }
         }
         SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).windowInsetsPadding(WindowInsets.navigationBars))
+        OpsIndicator(
+            Modifier
+                .align(Alignment.BottomEnd)
+                .windowInsetsPadding(WindowInsets.navigationBars)
+                .padding(end = 16.dp, bottom = 40.dp),
+        )
     }
 }
 

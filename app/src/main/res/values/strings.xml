@@ -132,6 +132,24 @@
     <string name="name_nul">El nombre contiene un carácter no válido.</string>
     <string name="name_too_long">El nombre es demasiado largo (máximo 255 bytes).</string>
     <string name="name_exists">Ya hay un elemento con ese nombre aquí.</string>
+    <string name="ops_title">Operaciones</string>
+    <string name="ops_clear">Limpiar terminadas</string>
+    <string name="ops_queued">En cola</string>
+    <string name="ops_cancelling">Cancelando…</string>
+    <plurals name="ops_active">
+        <item quantity="one">%d operación</item>
+        <item quantity="other">%d operaciones</item>
+    </plurals>
+    <plurals name="ops_items">
+        <item quantity="one">%1$s · %2$d elemento</item>
+        <item quantity="other">%1$s · %2$d elementos</item>
+    </plurals>
+    <string name="kind_copy">Copia</string>
+    <string name="kind_move">Movimiento</string>
+    <string name="kind_trash">Papelera</string>
+    <string name="kind_delete">Borrado</string>
+    <string name="kind_restore">Restauración</string>
+    <string name="kind_rename">Renombrado</string>
     <string name="ops_cancelled">Operación cancelada</string>
     <string name="ops_failed_into_itself">No se puede copiar ni mover una carpeta dentro de sí misma.</string>
     <string name="ops_failed_protected">Las carpetas del sistema no se pueden mover, renombrar ni borrar.</string>

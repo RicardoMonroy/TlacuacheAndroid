@@ -87,6 +87,17 @@ object OpsRepository {
         queue.takeUndo(id)?.let { enqueue(context, it) }
     }
 
+    /** Ctrl+Z: deshace la operación terminada más reciente que se pueda deshacer. */
+    fun undoLast(context: Context) {
+        _operations.value.lastOrNull { it.canUndo }?.let { undo(context, it.id) }
+    }
+
+    /** Quita de la lista las terminadas (el detalle del indicador). */
+    fun clearFinished() {
+        queue.clearFinished()
+        publish()
+    }
+
     fun isIdle() = queue.isIdle()
 
     private fun publish() {

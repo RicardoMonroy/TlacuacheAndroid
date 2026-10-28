@@ -118,6 +118,7 @@ class OpsRunner(
                     OpKind.TRASH -> trashAll()
                     OpKind.DELETE -> deleteAll()
                     OpKind.UNTRASH -> untrashAll()
+                    OpKind.RESTORE -> restoreAll(op)
                     OpKind.RENAME -> rename()
                     OpKind.MKDIR -> create(directory = true)
                     OpKind.CREATE_FILE -> create(directory = false)
@@ -315,6 +316,34 @@ class OpsRunner(
                 changed(src)
                 return target
             }
+            return moveResolved(src, target)
+        }
+
+        /**
+         * Deshacer mover: cada origen vuelve a su ruta exacta en `targets` (puede tener otro nombre, p. ej. si
+         * al moverlo quedó «a (2).txt»). Si esa ruta está ocupada, se pregunta como en un conflicto.
+         */
+        suspend fun restoreAll(op: Operation): Journal {
+            for ((src, back) in sources.zip(op.targets.map(::File))) {
+                val parent = back.parentFile ?: throw FailedException(Failure.IO, back.path)
+                if (!parent.isDirectory && !parent.mkdirs()) throw FailedException(Failure.IO, parent.path)
+                val target = resolveConflict(src, back) ?: continue.also { skipped(src) }
+                if (src.isDirectory && target.isDirectory) {
+                    src.listFiles().orEmpty().forEach { moveInto(it, target) }
+                    if (src.listFiles().isNullOrEmpty()) src.delete()
+                } else {
+                    moveResolved(src, target)
+                }
+                pairs += MovedItem(src.path, target.path)
+            }
+            return journal()
+        }
+
+        /** Mueve [src] a [target] (ya libre o a reemplazar): renombrado atómico o, entre volúmenes, copiar y borrar. */
+        suspend fun moveResolved(
+            src: File,
+            target: File,
+        ): File {
             checkCancelled()
             try {
                 atomicMove(src.toPath(), target.toPath())

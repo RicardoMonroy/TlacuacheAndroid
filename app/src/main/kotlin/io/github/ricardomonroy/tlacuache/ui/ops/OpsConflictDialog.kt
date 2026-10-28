@@ -164,7 +164,7 @@ fun finishedMessage(op: Operation): Int =
                 OpKind.MOVE -> R.string.ops_done_move
                 OpKind.TRASH -> R.string.ops_done_trash
                 OpKind.DELETE -> R.string.ops_done_delete
-                OpKind.UNTRASH -> R.string.ops_done_untrash
+                OpKind.UNTRASH, OpKind.RESTORE -> R.string.ops_done_untrash
                 OpKind.RENAME -> R.string.ops_done_rename
                 OpKind.MKDIR, OpKind.CREATE_FILE -> R.string.ops_done_create
                 else -> R.string.ops_done_copy

@@ -7,6 +7,7 @@ import io.github.ricardomonroy.tlacuache.ffi.OpKind
 import io.github.ricardomonroy.tlacuache.ffi.OpState
 import io.github.ricardomonroy.tlacuache.ffi.Operation
 import io.github.ricardomonroy.tlacuache.ffi.Progress
+import io.github.ricardomonroy.tlacuache.ffi.undoRequest
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
@@ -241,6 +242,32 @@ class OpsRunnerTest {
         assertEquals(0L, empty.length())
         expectFailure(OpsRunner.Failure.EXISTS) { run(op(OpKind.MKDIR, folder)) }
         expectFailure(OpsRunner.Failure.READ_ONLY_DEST) { run(op(OpKind.MKDIR, File(root, "Android/data/x"))) }
+    }
+
+    @Test
+    fun undoingAMoveRestoresTheExactNames() {
+        val a = file(src, "a.txt", 3)
+        file(dst, "a.txt", 7)
+        answer = OpsRunner.Decision(ConflictAction.KEEP_BOTH, applyToAll = false)
+        val journal = run(op(OpKind.MOVE, a))
+        val undo = checkNotNull(undoRequest(OpKind.MOVE, journal))
+        assertEquals(OpKind.RESTORE, undo.kind)
+        run(
+            Operation(
+                2u,
+                undo.kind,
+                undo.sources,
+                undo.dest,
+                undo.targets,
+                OpState.Running,
+                Progress(0u, null, 0u, null, null),
+                null,
+                false,
+            ),
+        )
+        assertEquals(3L, a.length())
+        assertFalse(File(dst, "a (2).txt").exists())
+        assertEquals(7L, File(dst, "a.txt").length())
     }
 
     private fun expectFailure(
