@@ -10,7 +10,7 @@ El layout se elige con los umbrales de las *window size classes* de Material 3 (
 |---|---|---|---|---|
 | Compacta (< 600 dp) | Teléfono vertical | Cajón modal (botón ☰ o deslizar desde el borde) | 1 visible; alternador **A / B** en la barra superior | Barra inferior contextual |
 | Media (600–839 dp) | Tablet vertical, teléfono horizontal, plegable abierto | Riel de navegación (íconos) que se expande | 2 lado a lado si `dual_pane` está activo (por defecto sí en horizontal) | Franja central entre paneles + barra inferior contextual |
-| Expandida (≥ 840 dp) | Tablet horizontal, DeX, escritorio de Pixel | Permanente, colapsable (F9), ancho redimensionable | 2 lado a lado, divisor arrastrable | Barra de herramientas superior + franja central |
+| Expandida (≥ 840 dp) | Tablet horizontal, DeX, escritorio de Pixel | Permanente, colapsable (F9), ancho redimensionable | 2 lado a lado, divisor arrastrable | Encabezado por panel (ADR-A16) + franja central |
 
 Con dos paneles, cada uno mide al menos 400 dp (botones y ruta legibles); en un teléfono horizontal el divisor apenas se mueve. «Doble panel» en el menú ⋮ (F3) apaga y enciende el modo dual en media y expandida; apagado se ve un panel con el alternador A/B. En compacta, sobre la fila de navegación va una fila con el alternador A/B y el botón de pestañas.
 
@@ -22,18 +22,17 @@ Columnas Miller (v0.2): solo disponibles en clase expandida.
 
 ```
 Expandida (tablet horizontal / escritorio)
-┌───────────────────────────────────────────────────────────────────────────┐
-│ ☰  Tlacuache        [1|2]  🔍  ⟳  ⋮                        ▸ 2 operaciones │
-├────────────┬─────────────────────────────┬──┬─────────────────────────────┤
-│ LUGARES    │ [Fotos][Descargas][+]       │  │ [Documentos][+]             │
-│  Fotos     │ ‹ › ↑ Interno › DCIM › 2026 │C→│ ‹ › ↑ Interno › Documents   │
+┌────────────┬─────────────────────────────┬──┬─────────────────────────────┐
+│ ☰          │ [Fotos][Descargas][+]       │  │ [Documentos][+]             │
+│ LUGARES    │ ‹ › ↑ Interno › DCIM  🔍 ⋮  │C→│ ‹ › ↑ Interno › Docs  🔍 ⋮  │
+│  Fotos     │                             │  │                             │
 │  Descargas │ ┌─────────────────────────┐ │  │ ┌─────────────────────────┐ │
 │  Documentos│ │ nombre   tamaño edad    │ │M→│ │ nombre   tamaño edad    │ │
 │ VOLÚMENES  │ │ IMG_01   4 MB   2h      │ │  │ │ factura  80 KB  3d      │ │
 │  Interno 62%│ └─────────────────────────┘ │  │ └─────────────────────────┘ │
 │  SD 30%    │ 120 elementos · 3 sel · 12 MB│  │ 8 elementos · 41 GB libres  │
 │ FAVORITOS  │                             │  │                             │
-│ Papelera   │                             │  │                             │
+│ Papelera   │                             │  │      ▸ 2 operaciones        │
 └────────────┴─────────────────────────────┴──┴─────────────────────────────┘
 
 Compacta (teléfono vertical)
@@ -59,7 +58,7 @@ Compacta (teléfono vertical)
   - Íconos: cuadrícula de miniaturas (fotos, videos, PDF) o íconos de tipo; nombre en dos líneas. Pellizcar cambia el tamaño (v0.2). Cada pestaña recuerda su vista; se cambia con ⋮ › Vista de íconos o Ctrl+1/Ctrl+2.
   - Columnas Miller (v0.2, solo expandida).
 - **Edad relativa**: chip (o texto, según el tema) con formato compacto (`ahora`, `12min`, `2h`, `3d`, `3M`, `1a`); colores por bucket según `THEMES.md` §3.
-- **Barra de estado** del panel, al pie: elementos, seleccionados, tamaño seleccionado, espacio libre del volumen («133 GB libres de 256 GB»; del interno, el total nominal que muestra Ajustes, no el del sistema de archivos). En compacta se reduce a «N elementos» o «N seleccionados · tamaño». El espacio se relee con cada lectura de la carpeta.
+- **Barra de estado** del panel, al pie: elementos, seleccionados, tamaño seleccionado, espacio libre del volumen («133 GB libres de 256 GB»; del interno, el total nominal que muestra Ajustes, no el del sistema de archivos). En compacta se reduce a «N elementos» o «N seleccionados · tamaño»; en un panel de menos de 400 dp, con selección no se repiten los elementos y el espacio dice solo «133 GB libres». El espacio se relee con cada lectura de la carpeta.
 - **Estados vacíos** con la voz de la marca («Aquí no hay nada… ni para el tlacuache.»). Nunca humor en errores.
 
 ## 3. Interacción por tipo de puntero

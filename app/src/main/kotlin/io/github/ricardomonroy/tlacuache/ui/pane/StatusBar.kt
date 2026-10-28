@@ -2,6 +2,7 @@ package io.github.ricardomonroy.tlacuache.ui.pane
 
 import android.text.format.Formatter
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -33,10 +34,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * Barra de estado del panel (UI_SPEC §2): elementos visibles a la izquierda y espacio libre del volumen a
- * la derecha (no en compacta). El espacio se relee con cada lectura de la carpeta.
- *
- * shortcut: «N seleccionados · tamaño» llega con la selección (A3.4), resumida con `core::summary`.
+ * Barra de estado del panel (UI_SPEC §2): elementos visibles o «N seleccionados · tamaño» a la izquierda y
+ * espacio libre del volumen a la derecha (no en compacta). El espacio se relee con cada lectura de la
+ * carpeta. En un panel estrecho los textos se acortan: con selección no se repiten los elementos y el
+ * espacio dice solo lo libre (A4.11).
  */
 @Composable
 fun StatusBar(
@@ -51,54 +52,65 @@ fun StatusBar(
         value =
             if (root != null && showFreeSpace) withContext(Dispatchers.IO) { Volumes.space(context, root) } else null
     }
-    Row(
+    BoxWithConstraints(
         Modifier
             .fillMaxWidth()
             .background(t.colors.headerBg.color)
             .windowInsetsPadding(WindowInsets.navigationBars)
             .heightIn(min = 28.dp)
             .padding(horizontal = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        contentAlignment = Alignment.CenterStart,
     ) {
-        val style = MaterialTheme.typography.bodySmall
-        // Con selección: «3 seleccionados · 12 MB» (`core::summary`; las carpetas no suman tamaño).
-        val selection = ui.selection
-        val summary = remember(selection) { if (selection.isEmpty()) null else summarize(selection) }
-        val items = pluralStringResource(R.plurals.pane_item_count, ui.visible.size, ui.visible.size)
-        val text =
-            summary?.let {
-                val count = pluralStringResource(R.plurals.selection_count, selection.size, selection.size)
-                val sized =
-                    if (it.files > 0u) {
-                        stringResource(
-                            R.string.status_selection,
-                            count,
-                            Formatter.formatShortFileSize(context, it.bytes.toLong()),
-                        )
-                    } else {
-                        count
-                    }
-                if (showFreeSpace) stringResource(R.string.status_selection, items, sized) else sized
-            } ?: items
-        Text(
-            text,
-            color = t.colors.headerMuted,
-            style = style,
-            maxLines = 1,
-            modifier = Modifier.weight(1f),
-        )
-        space?.let { (free, size) ->
+        val narrow = maxWidth < NarrowWidth
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            val style = MaterialTheme.typography.bodySmall
+            // Con selección: «3 seleccionados · 12 MB» (`core::summary`; las carpetas no suman tamaño).
+            val selection = ui.selection
+            val summary = remember(selection) { if (selection.isEmpty()) null else summarize(selection) }
+            val items = pluralStringResource(R.plurals.pane_item_count, ui.visible.size, ui.visible.size)
+            val text =
+                summary?.let {
+                    val count = pluralStringResource(R.plurals.selection_count, selection.size, selection.size)
+                    val sized =
+                        if (it.files > 0u) {
+                            stringResource(
+                                R.string.status_selection,
+                                count,
+                                Formatter.formatShortFileSize(context, it.bytes.toLong()),
+                            )
+                        } else {
+                            count
+                        }
+                    if (showFreeSpace && !narrow) stringResource(R.string.status_selection, items, sized) else sized
+                } ?: items
             Text(
-                stringResource(
-                    R.string.volume_free,
-                    Formatter.formatShortFileSize(context, free),
-                    Formatter.formatShortFileSize(context, size),
-                ),
+                text,
                 color = t.colors.headerMuted,
                 style = style,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
             )
+            space?.let { (free, size) ->
+                Text(
+                    if (narrow) {
+                        stringResource(R.string.volume_free_short, Formatter.formatShortFileSize(context, free))
+                    } else {
+                        stringResource(
+                            R.string.volume_free,
+                            Formatter.formatShortFileSize(context, free),
+                            Formatter.formatShortFileSize(context, size),
+                        )
+                    },
+                    color = t.colors.headerMuted,
+                    style = style,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
         }
     }
 }
+
+/** Por debajo, la barra de estado acorta sus textos para que quepan con la selección. */
+private val NarrowWidth = 400.dp

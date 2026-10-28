@@ -25,6 +25,7 @@
     <string name="sidebar_places">Lugares</string>
     <string name="sidebar_volumes">Volúmenes</string>
     <string name="volume_free">%1$s libres de %2$s</string>
+    <string name="volume_free_short">%s libres</string>
     <string name="sidebar_favorites">Favoritos</string>
     <string name="favorites_default_group">Favoritos</string>
     <string name="favorites_empty">Añade carpetas con ⋮ › Añadir a favoritos.</string>
