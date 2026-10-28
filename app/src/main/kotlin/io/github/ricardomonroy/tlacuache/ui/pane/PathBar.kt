@@ -51,6 +51,7 @@ import io.github.ricardomonroy.tlacuache.state.TabState
 import io.github.ricardomonroy.tlacuache.ui.theme.MonoFamily
 import io.github.ricardomonroy.tlacuache.ui.theme.TlacuacheTheme
 import io.github.ricardomonroy.tlacuache.ui.theme.color
+import io.github.ricardomonroy.tlacuache.ui.theme.headerMuted
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -107,7 +108,7 @@ private fun Breadcrumb(
             )
         } else {
             TextButton(onClick = { onCrumb(crumb) }) {
-                Text(label, color = t.colors.fgMuted.color, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
+                Text(label, color = t.colors.headerMuted, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
             }
         }
     }
@@ -125,7 +126,7 @@ private fun Breadcrumb(
             ) {
                 for (i in 0 until ui.crumbs.lastIndex) {
                     Crumb(i)
-                    Text("›", color = t.colors.fgMuted.color)
+                    Text("›", color = t.colors.headerMuted)
                 }
             }
             Box(Modifier.widthIn(max = limit)) { Crumb(ui.crumbs.lastIndex) }

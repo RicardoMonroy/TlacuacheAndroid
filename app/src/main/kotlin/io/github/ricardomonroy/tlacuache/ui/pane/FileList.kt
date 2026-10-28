@@ -43,6 +43,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -54,6 +55,7 @@ import io.github.ricardomonroy.tlacuache.ffi.AgeBucket
 import io.github.ricardomonroy.tlacuache.ffi.AgeStyle
 import io.github.ricardomonroy.tlacuache.ffi.AgeUnit
 import io.github.ricardomonroy.tlacuache.ffi.FileEntry
+import io.github.ricardomonroy.tlacuache.ffi.SelectionStyle
 import io.github.ricardomonroy.tlacuache.ffi.SortKey
 import io.github.ricardomonroy.tlacuache.ffi.SortSpec
 import io.github.ricardomonroy.tlacuache.ffi.age
@@ -346,10 +348,13 @@ private fun RowContent(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        FileIcon(rememberCategory(entry), 20.dp)
+        val category = rememberCategory(entry)
+        FileIcon(category, 20.dp)
+        val (label, labelColor) = entryLabel(entry, category)
         Text(
-            entry.name,
-            color = selection?.content ?: t.colors.fg.color,
+            label,
+            color = selection?.content ?: labelColor ?: t.colors.fg.color,
+            fontWeight = selection?.weight,
             maxLines = 1,
             overflow = TextOverflow.MiddleEllipsis,
             style = MaterialTheme.typography.bodyLarge,
@@ -358,7 +363,7 @@ private fun RowContent(
         if (columns.size) {
             Text(
                 if (entry.isDir) "" else Formatter.formatShortFileSize(context, entry.size.toLong()),
-                color = t.colors.fgMuted.color,
+                color = selection?.content ?: t.colors.fgMuted.color,
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.End,
                 modifier = Modifier.width(72.dp),
@@ -371,7 +376,7 @@ private fun RowContent(
                 }
             Text(
                 date.orEmpty(),
-                color = t.colors.fgMuted.color,
+                color = selection?.content ?: t.colors.fgMuted.color,
                 style = MaterialTheme.typography.bodyMedium,
                 maxLines = 1,
                 modifier = Modifier.width(132.dp),
@@ -379,7 +384,7 @@ private fun RowContent(
         }
         if (columns.age) {
             Box(Modifier.width(56.dp), contentAlignment = Alignment.CenterEnd) {
-                entry.modifiedMs?.let { AgeChip(remember(it, nowMs) { age(it, nowMs) }) }
+                entry.modifiedMs?.let { AgeChip(remember(it, nowMs) { age(it, nowMs) }, selection) }
             }
         }
     }
@@ -389,6 +394,8 @@ private fun RowContent(
 class SelectionColors(
     val background: Color,
     val content: Color,
+    /** Seminegrita con `selection_style = "invert"` (video inverso, THEMES.md §3). */
+    val weight: FontWeight? = null,
 )
 
 @Composable
@@ -398,16 +405,20 @@ fun selectionColors(
 ): SelectionColors? {
     if (!selected) return null
     val c = TlacuacheTheme.tokens.colors
+    val weight = FontWeight.SemiBold.takeIf { TlacuacheTheme.tokens.style.selectionStyle == SelectionStyle.INVERT }
     return if (activePane) {
-        SelectionColors(c.selectionBg.color, c.selectionFg.color)
+        SelectionColors(c.selectionBg.color, c.selectionFg.color, weight)
     } else {
-        SelectionColors(c.selectionInactiveBg.color, c.fg.color)
+        SelectionColors(c.selectionInactiveBg.color, c.fg.color, weight)
     }
 }
 
 /** Edad compacta con el color de su bucket, como chip o como texto según el tema (THEMES.md §3). */
 @Composable
-private fun AgeChip(age: Age) {
+private fun AgeChip(
+    age: Age,
+    selection: SelectionColors?,
+) {
     val t = TlacuacheTheme.tokens
     val bucket =
         when (age.bucket) {
@@ -439,6 +450,8 @@ private fun AgeChip(age: Age) {
                     .padding(horizontal = 6.dp, vertical = 2.dp),
         )
     } else {
-        Text(label, color = bucket, style = MaterialTheme.typography.labelMedium, maxLines = 1)
+        // Video inverso: sobre la selección la edad en texto toma su color (si no, no se leería).
+        val color = if (selection?.weight != null) selection.content else bucket
+        Text(label, color = color, style = MaterialTheme.typography.labelMedium, maxLines = 1)
     }
 }

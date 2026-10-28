@@ -95,8 +95,10 @@ import io.github.ricardomonroy.tlacuache.ui.Shortcut
 import io.github.ricardomonroy.tlacuache.ui.WithTooltip
 import io.github.ricardomonroy.tlacuache.ui.ops.DeleteConfirmation
 import io.github.ricardomonroy.tlacuache.ui.ops.NameDialog
+import io.github.ricardomonroy.tlacuache.ui.theme.ThemeDialog
 import io.github.ricardomonroy.tlacuache.ui.theme.TlacuacheTheme
 import io.github.ricardomonroy.tlacuache.ui.theme.color
+import io.github.ricardomonroy.tlacuache.ui.theme.headerDisabled
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -208,6 +210,7 @@ private fun TabScreen(
     // Campo del filtro abierto con el botón de buscar (táctil); con teclado físico basta con escribir.
     var filterOpen by rememberSaveable { mutableStateOf(false) }
     var moreMenu by remember { mutableStateOf(false) }
+    var themeDialog by remember { mutableStateOf(false) }
     // Borrar permanentemente siempre pide confirmación (CLAUDE.md, regla 6).
     var confirmDelete by remember { mutableStateOf<List<File>?>(null) }
     // Diálogo de nombre abierto: renombrar este elemento, o crear una carpeta o un archivo vacío.
@@ -656,8 +659,16 @@ private fun TabScreen(
                                 },
                             )
                         }
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.theme_menu)) },
+                            onClick = {
+                                moreMenu = false
+                                themeDialog = true
+                            },
+                        )
                     }
                 }
+                if (themeDialog) ThemeDialog { themeDialog = false }
             }
         }
         // Soltar en la lista (fuera de una carpeta) deja los archivos en la carpeta de la pestaña.
@@ -801,7 +812,7 @@ private fun NavButton(
         ) {
             Text(
                 glyph,
-                color = if (enabled) t.colors.headerFg.color else t.colors.fgMuted.color,
+                color = if (enabled) t.colors.headerFg.color else t.colors.headerDisabled,
                 style = MaterialTheme.typography.titleLarge,
             )
         }

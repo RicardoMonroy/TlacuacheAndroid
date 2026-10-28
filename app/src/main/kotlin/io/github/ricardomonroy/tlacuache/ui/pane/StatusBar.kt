@@ -28,6 +28,7 @@ import io.github.ricardomonroy.tlacuache.state.TabState
 import io.github.ricardomonroy.tlacuache.storage.Volumes
 import io.github.ricardomonroy.tlacuache.ui.theme.TlacuacheTheme
 import io.github.ricardomonroy.tlacuache.ui.theme.color
+import io.github.ricardomonroy.tlacuache.ui.theme.headerMuted
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -81,7 +82,7 @@ fun StatusBar(
             } ?: items
         Text(
             text,
-            color = t.colors.fgMuted.color,
+            color = t.colors.headerMuted,
             style = style,
             maxLines = 1,
             modifier = Modifier.weight(1f),
@@ -93,7 +94,7 @@ fun StatusBar(
                     Formatter.formatShortFileSize(context, free),
                     Formatter.formatShortFileSize(context, size),
                 ),
-                color = t.colors.fgMuted.color,
+                color = t.colors.headerMuted,
                 style = style,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

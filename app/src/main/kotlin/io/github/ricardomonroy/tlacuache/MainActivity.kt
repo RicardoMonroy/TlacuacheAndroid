@@ -10,7 +10,9 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -22,11 +24,10 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.setSingletonImageLoaderFactory
-import io.github.ricardomonroy.tlacuache.ffi.builtinTheme
-import io.github.ricardomonroy.tlacuache.ffi.defaultThemeId
 import io.github.ricardomonroy.tlacuache.ops.OpsRepository
 import io.github.ricardomonroy.tlacuache.state.WindowViewModel
 import io.github.ricardomonroy.tlacuache.storage.StorageAccess
+import io.github.ricardomonroy.tlacuache.storage.ThemeStore
 import io.github.ricardomonroy.tlacuache.ui.Shortcut
 import io.github.ricardomonroy.tlacuache.ui.TrackPointer
 import io.github.ricardomonroy.tlacuache.ui.pane.PaneLayout
@@ -71,20 +72,32 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        // El tema predeterminado va embebido en el core y sus pruebas lo validan: nulo sería un error de build.
-        val tokens = requireNotNull(builtinTheme(defaultThemeId())) { "tema predeterminado ausente" }
-        // Barras del sistema transparentes; el contenido pinta debajo (edge-to-edge).
-        val bars =
-            if (tokens.dark) {
-                SystemBarStyle.dark(TRANSPARENT)
-            } else {
-                SystemBarStyle.light(TRANSPARENT, TRANSPARENT)
-            }
-        enableEdgeToEdge(statusBarStyle = bars, navigationBarStyle = bars)
+        enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        val themes = ThemeStore.shared(filesDir)
         setContent {
-            TlacuacheTheme(tokens) {
-                App()
+            LaunchedEffect(Unit) { themes.load() }
+            val catalog by themes.themes.collectAsStateWithLifecycle()
+            val setting by themes.setting.collectAsStateWithLifecycle()
+            // Con configChanges="uiMode" la actividad sigue viva y esto se recompone al cambiar el sistema.
+            val systemDark = isSystemInDarkTheme()
+            val tokens = remember(catalog, setting, systemDark) { themes.tokens(systemDark) }
+            // Hasta leer el catálogo (unos ms en IO) solo se ve el fondo de la ventana.
+            if (tokens != null) {
+                LaunchedEffect(tokens.id) { themes.applied(tokens.id) }
+                // Barras del sistema transparentes; el contenido pinta debajo (edge-to-edge).
+                LaunchedEffect(tokens.dark) {
+                    val bars =
+                        if (tokens.dark) {
+                            SystemBarStyle.dark(TRANSPARENT)
+                        } else {
+                            SystemBarStyle.light(TRANSPARENT, TRANSPARENT)
+                        }
+                    enableEdgeToEdge(statusBarStyle = bars, navigationBarStyle = bars)
+                }
+                TlacuacheTheme(tokens) {
+                    App()
+                }
             }
         }
     }

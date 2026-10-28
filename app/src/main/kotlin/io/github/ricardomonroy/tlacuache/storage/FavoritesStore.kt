@@ -8,7 +8,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -26,7 +25,7 @@ class FavoritesStore(
 ) {
     enum class Result { OK, EMPTY_NAME, DUPLICATE_NAME, FAILED }
 
-    private val mutex = Mutex()
+    private val mutex = ConfigLock.mutex
     private var favorites: Favorites? = null
     private val _groups = MutableStateFlow(emptyList<FavoriteGroup>())
     val groups: StateFlow<List<FavoriteGroup>> = _groups.asStateFlow()

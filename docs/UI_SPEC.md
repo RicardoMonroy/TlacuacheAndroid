@@ -168,4 +168,4 @@ La app distingue el tipo de puntero de cada evento (`PointerType.Touch` / `Mouse
 
 ## 11. Tema
 
-Ver `THEMES.md` (repo Linux). Predeterminado: `nord`. Opción «Seguir al sistema» (claro → `claro`, oscuro → `nord`, configurables). Los colores de la barra de estado y de navegación del sistema siguen al tema (edge-to-edge). Íconos de tipo de archivo teñidos por categoría (`[filetypes]`), como en Linux (ADR-010 de Linux).
+Ver `THEMES.md` (repo Linux). Predeterminado: `nord`. Opción «Seguir al sistema» (claro → `claro`, oscuro → `nord`, configurables). Se elige en ⋮ › «Tema…» (y en Preferencias, A5.2): tocar un tema lo aplica al instante; con «Seguir al sistema» se marca un tema para el modo claro y otro para el oscuro, y al apagarlo se queda el que se ve. Sobre la cabecera, el texto secundario es `header_fg` atenuado (no `fg_muted`, que solo contrasta sobre el panel). Los colores de la barra de estado y de navegación del sistema siguen al tema (edge-to-edge). Íconos de tipo de archivo teñidos por categoría (`[filetypes]`), como en Linux (ADR-010 de Linux).

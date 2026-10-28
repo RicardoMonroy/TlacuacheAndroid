@@ -87,6 +87,7 @@ import io.github.ricardomonroy.tlacuache.ffi.OpRequest
 import io.github.ricardomonroy.tlacuache.ops.Clipboard
 import io.github.ricardomonroy.tlacuache.ops.OpsRepository
 import io.github.ricardomonroy.tlacuache.state.WindowViewModel
+import io.github.ricardomonroy.tlacuache.storage.ThemeStore
 import io.github.ricardomonroy.tlacuache.storage.Volumes
 import io.github.ricardomonroy.tlacuache.ui.Shortcut
 import io.github.ricardomonroy.tlacuache.ui.WithTooltip
@@ -100,6 +101,7 @@ import io.github.ricardomonroy.tlacuache.ui.sidebar.SidebarRail
 import io.github.ricardomonroy.tlacuache.ui.sidebar.SidebarWidth
 import io.github.ricardomonroy.tlacuache.ui.theme.TlacuacheTheme
 import io.github.ricardomonroy.tlacuache.ui.theme.color
+import io.github.ricardomonroy.tlacuache.ui.theme.headerDisabled
 import io.github.ricardomonroy.tlacuache.ui.trash.TrashScreen
 import kotlinx.coroutines.launch
 import java.io.File
@@ -200,6 +202,28 @@ fun PaneLayout(window: WindowViewModel) {
     OpsConflictDialog()
     val resources = LocalResources.current
     LaunchedEffect(window) { window.notices.collect { snackbar.showSnackbar(resources.getString(it)) } }
+    // Temas de usuario rotos o con poco contraste: se aplican igual (o se usa Nord) y se avisa (THEMES.md §6).
+    val themeStore = ThemeStore.shared(context.filesDir)
+    LaunchedEffect(themeStore) {
+        // Collect, no clave del efecto: vaciar la lista no debe cancelar los avisos que se están mostrando.
+        themeStore.warnings.collect { pending ->
+            if (pending.isEmpty()) return@collect
+            themeStore.consumeWarnings()
+            pending.forEach { w ->
+                val text =
+                    when (w) {
+                        is ThemeStore.Warning.Broken -> {
+                            resources.getString(R.string.theme_broken, w.message)
+                        }
+
+                        is ThemeStore.Warning.LowContrast -> {
+                            resources.getString(R.string.theme_low_contrast, w.theme, w.pairs.joinToString(", "))
+                        }
+                    }
+                snackbar.showSnackbar(text, duration = SnackbarDuration.Long)
+            }
+        }
+    }
     LaunchedEffect(Unit) {
         // Con Deshacer si el core supo cómo revertirla (UI_SPEC §4).
         OpsRepository.finished.collect { op ->
@@ -439,7 +463,7 @@ private fun StripButton(
     onClick: () -> Unit,
 ) {
     val t = TlacuacheTheme.tokens
-    val color = if (enabled) t.colors.accent.color else t.colors.fgMuted.color
+    val color = if (enabled) t.colors.headerFg.color else t.colors.headerDisabled
     val text = stringResource(description)
     WithTooltip(text, shortcut) {
         Column(

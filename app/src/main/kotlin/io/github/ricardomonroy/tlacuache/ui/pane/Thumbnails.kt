@@ -1,6 +1,5 @@
 package io.github.ricardomonroy.tlacuache.ui.pane
 
-import android.graphics.Color
 import android.graphics.pdf.PdfRenderer
 import android.os.ParcelFileDescriptor
 import android.webkit.MimeTypeMap
@@ -8,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -15,7 +15,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -35,12 +37,16 @@ import coil3.video.VideoFrameDecoder
 import io.github.ricardomonroy.tlacuache.R
 import io.github.ricardomonroy.tlacuache.ffi.FileCategory
 import io.github.ricardomonroy.tlacuache.ffi.FileEntry
+import io.github.ricardomonroy.tlacuache.ffi.FileTypeColors
+import io.github.ricardomonroy.tlacuache.ffi.IconStyle
 import io.github.ricardomonroy.tlacuache.ffi.classify
+import io.github.ricardomonroy.tlacuache.ui.theme.MonoFamily
 import io.github.ricardomonroy.tlacuache.ui.theme.TlacuacheTheme
 import io.github.ricardomonroy.tlacuache.ui.theme.color
 import java.io.File
 import kotlin.math.min
 import kotlin.math.roundToInt
+import android.graphics.Color as AndroidColor
 
 /** Categoría de una entrada para su ícono y color (`core::filetype`); se calcula por celda visible. */
 @Composable
@@ -50,35 +56,86 @@ fun rememberCategory(entry: FileEntry): FileCategory =
         classify(entry.name, mime, entry.isDir)
     }
 
-/** Ícono simbólico de la categoría (BRAND.md §5), teñido con su color del tema. */
+/** Color de la categoría en `[filetypes]` del tema. */
+private fun FileCategory.tint(f: FileTypeColors): UInt =
+    when (this) {
+        FileCategory.FOLDER -> f.folder
+        FileCategory.CODE -> f.code
+        FileCategory.IMAGE -> f.image
+        FileCategory.VIDEO -> f.video
+        FileCategory.AUDIO -> f.audio
+        FileCategory.ARCHIVE -> f.archive
+        FileCategory.DOCUMENT -> f.document
+        FileCategory.PDF -> f.pdf
+        FileCategory.SPREADSHEET -> f.spreadsheet
+        FileCategory.TEXT -> f.text
+        FileCategory.EXECUTABLE -> f.executable
+        FileCategory.OTHER -> f.other
+    }
+
+private fun FileCategory.icon(): Int =
+    when (this) {
+        FileCategory.FOLDER -> R.drawable.ic_folder
+        FileCategory.CODE -> R.drawable.ic_file_code
+        FileCategory.IMAGE -> R.drawable.ic_file_image
+        FileCategory.VIDEO -> R.drawable.ic_file_video
+        FileCategory.AUDIO -> R.drawable.ic_file_audio
+        FileCategory.ARCHIVE -> R.drawable.ic_file_archive
+        FileCategory.DOCUMENT -> R.drawable.ic_file_document
+        FileCategory.PDF -> R.drawable.ic_file_pdf
+        FileCategory.SPREADSHEET -> R.drawable.ic_file_spreadsheet
+        FileCategory.TEXT -> R.drawable.ic_file_text
+        FileCategory.EXECUTABLE -> R.drawable.ic_file_executable
+        FileCategory.OTHER -> R.drawable.ic_file_other
+    }
+
+/**
+ * Ícono de la categoría (BRAND.md §5) según `icon_style` (THEMES.md §3): teñido con su color (`color`), en
+ * `fg_muted` (`symbolic`) o, con `glyph`, el glifo del tema en monoespaciada (`[glyphs]`).
+ */
 @Composable
 fun FileIcon(
     category: FileCategory,
     size: Dp,
     modifier: Modifier = Modifier,
 ) {
-    val f = TlacuacheTheme.tokens.filetypes
-    val (icon, tint) =
-        when (category) {
-            FileCategory.FOLDER -> R.drawable.ic_folder to f.folder
-            FileCategory.CODE -> R.drawable.ic_file_code to f.code
-            FileCategory.IMAGE -> R.drawable.ic_file_image to f.image
-            FileCategory.VIDEO -> R.drawable.ic_file_video to f.video
-            FileCategory.AUDIO -> R.drawable.ic_file_audio to f.audio
-            FileCategory.ARCHIVE -> R.drawable.ic_file_archive to f.archive
-            FileCategory.DOCUMENT -> R.drawable.ic_file_document to f.document
-            FileCategory.PDF -> R.drawable.ic_file_pdf to f.pdf
-            FileCategory.SPREADSHEET -> R.drawable.ic_file_spreadsheet to f.spreadsheet
-            FileCategory.TEXT -> R.drawable.ic_file_text to f.text
-            FileCategory.EXECUTABLE -> R.drawable.ic_file_executable to f.executable
-            FileCategory.OTHER -> R.drawable.ic_file_other to f.other
+    val t = TlacuacheTheme.tokens
+    val glyphs = t.glyphs
+    if (t.style.iconStyle == IconStyle.GLYPH && glyphs != null) {
+        // Sin enlaces ni permisos en FileEntry: solo carpeta o archivo.
+        val glyph = if (category == FileCategory.FOLDER) glyphs.folder else glyphs.file
+        Box(modifier.then(Modifier.size(size)), contentAlignment = Alignment.Center) {
+            Text(
+                glyph,
+                color = category.tint(t.filetypes).color,
+                fontFamily = MonoFamily,
+                maxLines = 1,
+                fontSize = with(LocalDensity.current) { (size * 0.8f).toSp() },
+            )
         }
+        return
+    }
+    val tint = if (t.style.iconStyle == IconStyle.SYMBOLIC) t.colors.fgMuted else category.tint(t.filetypes)
     Icon(
-        painterResource(icon),
+        painterResource(category.icon()),
         contentDescription = null,
         tint = tint.color,
         modifier = modifier.then(Modifier.size(size)),
     )
+}
+
+/**
+ * Nombre como lo pinta el tema: con glifos, las carpetas llevan «/» y el nombre toma el color de su tipo
+ * (al estilo `LS_COLORS`, `core::Theme::entry_name`); si no, el nombre tal cual y `null` (color normal).
+ */
+@Composable
+fun entryLabel(
+    entry: FileEntry,
+    category: FileCategory,
+): Pair<String, Color?> {
+    val t = TlacuacheTheme.tokens
+    if (t.style.iconStyle != IconStyle.GLYPH || t.glyphs == null) return entry.name to null
+    return (if (entry.isDir) entry.name + "/" else entry.name) to category.tint(t.filetypes).color
 }
 
 /**
@@ -157,7 +214,7 @@ private class PdfPageFetcher(
                         val h = (page.height * scale).roundToInt().coerceAtLeast(1)
                         createBitmap(w, h).also {
                             // El papel del documento, no un color de la interfaz: los PDF suelen no pintar el fondo.
-                            it.eraseColor(Color.WHITE)
+                            it.eraseColor(AndroidColor.WHITE)
                             page.render(it, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
                         }
                     }

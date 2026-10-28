@@ -17,13 +17,24 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.github.ricardomonroy.tlacuache.R
+import io.github.ricardomonroy.tlacuache.ffi.ThemeColors
 import io.github.ricardomonroy.tlacuache.ffi.ThemeTokens
 
 /** Color ARGB opaco del core (`0xFFRRGGBB`) a `Color` de Compose. */
 val UInt.color: Color get() = Color(toInt())
 
+/**
+ * Texto secundario y deshabilitado sobre la cabecera (pestañas, ruta, barra de estado): `header_fg`
+ * atenuado, como `alpha(currentColor, …)` en Linux. `fg_muted` solo contrasta sobre el panel.
+ */
+val ThemeColors.headerMuted: Color get() = headerFg.color.copy(alpha = 0.72f)
+val ThemeColors.headerDisabled: Color get() = headerFg.color.copy(alpha = 0.38f)
+
+/** Fondo de la pestaña activa sobre la cabecera (`.tl-tab.selected` de Linux). */
+val ThemeColors.headerSelected: Color get() = headerFg.color.copy(alpha = 0.14f)
+
 // shortcut: solo se empaqueta JetBrains Mono (la `font_mono` de los cinco temas incluidos);
-// otra `font_mono` de un tema de usuario cae en esta misma. Revisar en A5.1.
+// otra `font_mono` de un tema de usuario cae en esta misma; sin fuentes descargables (no hay Play Services) habría que importar el .ttf: cuando un tema de usuario lo pida.
 val MonoFamily =
     FontFamily(
         Font(R.font.jetbrains_mono_regular),
@@ -46,7 +57,7 @@ fun TlacuacheTheme(
     content: @Composable () -> Unit,
 ) {
     val scheme = remember(tokens) { colorScheme(tokens) }
-    // shortcut: `font_ui` no vacía se ignora (fuente del sistema); fuentes de UI propias en A5.1.
+    // shortcut: `font_ui` no vacía se ignora (fuente del sistema); igual que `font_mono`: importar el .ttf cuando un tema lo pida.
     val typography = remember(tokens) { if (tokens.style.monoUi) Typography().withFamily(MonoFamily) else Typography() }
     val shapes =
         remember(tokens) {
@@ -77,7 +88,12 @@ private fun colorScheme(tokens: ThemeTokens) =
             onSurface = fg.color,
             surfaceVariant = sidebarBg.color,
             onSurfaceVariant = fgMuted.color,
-            surfaceContainer = headerBg.color,
+            // Menús, diálogos y hojas: sobre el fondo del panel, con su texto (`fg`).
+            surfaceContainerLowest = paneBg.color,
+            surfaceContainerLow = paneBg.color,
+            surfaceContainer = paneBg.color,
+            surfaceContainerHigh = paneBg.color,
+            surfaceContainerHighest = paneBg.color,
             outline = borderStrong.color,
             outlineVariant = border.color,
             error = error.color,

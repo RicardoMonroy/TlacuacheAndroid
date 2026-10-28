@@ -103,19 +103,22 @@ private fun Cell(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
+            val category = rememberCategory(entry)
             FileThumbnail(
                 dir,
                 entry,
-                rememberCategory(entry),
+                category,
                 Modifier
                     .fillMaxWidth()
                     .aspectRatio(1f)
                     .clip(MaterialTheme.shapes.small)
                     .background(t.colors.paneAltRow.color),
             )
+            val (label, labelColor) = entryLabel(entry, category)
             Text(
-                entry.name,
-                color = shown?.content ?: t.colors.fg.color,
+                label,
+                color = shown?.content ?: labelColor ?: t.colors.fg.color,
+                fontWeight = shown?.weight,
                 style = MaterialTheme.typography.bodySmall,
                 textAlign = TextAlign.Center,
                 maxLines = 2,

@@ -3,6 +3,9 @@
 //! Los colores viajan como ARGB opaco (`0xFFRRGGBB`), listos para
 //! `androidx.compose.ui.graphics.Color(Int)`.
 
+use std::path::Path;
+
+use tlacuache_core::config::{self, Config};
 use tlacuache_core::theme::{self as core, Color};
 use tlacuache_core::theme_catalog::ThemeCatalog;
 
@@ -119,6 +122,15 @@ pub struct ThemeStyle {
     pub age_style: AgeStyle,
 }
 
+/// Glifos en lugar de íconos (`icon_style = "glyph"`).
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct ThemeGlyphs {
+    pub folder: String,
+    pub file: String,
+    pub symlink: String,
+    pub executable: String,
+}
+
 #[derive(Debug, Clone, PartialEq, uniffi::Record)]
 pub struct ThemeTokens {
     pub id: String,
@@ -128,6 +140,8 @@ pub struct ThemeTokens {
     pub colors: ThemeColors,
     pub age: AgeColors,
     pub filetypes: FileTypeColors,
+    /// Solo si el tema usa glifos.
+    pub glyphs: Option<ThemeGlyphs>,
 }
 
 impl From<&core::Theme> for ThemeTokens {
@@ -165,8 +179,117 @@ impl From<&core::Theme> for ThemeTokens {
             colors: (&t.colors).into(),
             age: (&t.age).into(),
             filetypes: (&t.filetypes).into(),
+            glyphs: t.glyphs.as_ref().map(|g| ThemeGlyphs {
+                folder: g.folder.clone(),
+                file: g.file.clone(),
+                symlink: g.symlink.clone(),
+                executable: g.executable.clone(),
+            }),
         }
     }
+}
+
+/// Un tema del catálogo; `contrast` lista los pares que no cumplen (solo temas de usuario: los incluidos
+/// se validan en las pruebas del core).
+#[derive(Debug, Clone, PartialEq, uniffi::Record)]
+pub struct CatalogTheme {
+    pub tokens: ThemeTokens,
+    pub user: bool,
+    pub contrast: Vec<String>,
+}
+
+/// Los temas disponibles y los archivos de usuario que no se pudieron leer («roto.toml: … (línea N)»).
+#[derive(Debug, Clone, PartialEq, uniffi::Record)]
+pub struct ThemeList {
+    pub themes: Vec<CatalogTheme>,
+    pub errors: Vec<String>,
+}
+
+/// Incluidos más los `*.toml` de `user_dir` (THEMES.md §6), en una sola llamada. Lee disco: llamar en IO.
+#[uniffi::export]
+pub fn theme_catalog(user_dir: String) -> ThemeList {
+    let catalog = ThemeCatalog::load(Path::new(&user_dir));
+    let themes = catalog
+        .themes()
+        .iter()
+        .map(|t| {
+            let user = catalog.is_user(&t.meta.id);
+            let contrast = if user {
+                t.validate().iter().map(ToString::to_string).collect()
+            } else {
+                Vec::new()
+            };
+            CatalogTheme {
+                tokens: t.into(),
+                user,
+                contrast,
+            }
+        })
+        .collect();
+    let errors = catalog
+        .errors()
+        .iter()
+        .map(|e| {
+            let file = e.path.file_name().map_or_else(
+                || e.path.display().to_string(),
+                |n| n.to_string_lossy().into_owned(),
+            );
+            format!("{file}: {}", e.message)
+        })
+        .collect();
+    ThemeList { themes, errors }
+}
+
+/// `[theme]` de config.toml (THEMES.md §5.4).
+#[derive(Debug, Clone, PartialEq, Eq, uniffi::Record)]
+pub struct ThemeSetting {
+    pub name: String,
+    pub follow_system: bool,
+    pub light: String,
+    pub dark: String,
+}
+
+impl From<config::Theme> for ThemeSetting {
+    fn from(t: config::Theme) -> Self {
+        Self {
+            name: t.name,
+            follow_system: t.follow_system,
+            light: t.light,
+            dark: t.dark,
+        }
+    }
+}
+
+impl From<&ThemeSetting> for config::Theme {
+    fn from(t: &ThemeSetting) -> Self {
+        Self {
+            name: t.name.clone(),
+            follow_system: t.follow_system,
+            light: t.light.clone(),
+            dark: t.dark.clone(),
+        }
+    }
+}
+
+/// `[theme]` del texto de config.toml; `None` si no es TOML válido (se usan los valores por omisión).
+#[uniffi::export]
+pub fn theme_setting(config_toml: String) -> Option<ThemeSetting> {
+    Config::from_toml(&config_toml).ok().map(|c| c.theme.into())
+}
+
+/// Id del tema a usar según la preferencia clara/oscura del sistema.
+#[uniffi::export]
+pub fn resolve_theme(setting: ThemeSetting, system_dark: bool) -> String {
+    config::Theme::from(&setting)
+        .resolve(system_dark)
+        .to_owned()
+}
+
+/// Reescribe `[theme]` conservando comentarios y el resto; `None` si el texto no es TOML válido (no se
+/// toca el archivo).
+#[uniffi::export]
+pub fn update_theme_setting(config_toml: String, setting: ThemeSetting) -> Option<String> {
+    config::update_theme_toml(&config_toml, &(&setting).into()).ok()
 }
 
 /// Id del tema predeterminado (`nord`).
@@ -176,7 +299,6 @@ pub fn default_theme_id() -> String {
 }
 
 /// Tema incluido por id, sin tocar disco. `None` si no existe.
-// shortcut: solo temas incluidos; los de usuario (ThemeCatalog::load) llegan en A5.1.
 #[uniffi::export]
 pub fn builtin_theme(id: String) -> Option<ThemeTokens> {
     ThemeCatalog::builtin().get(&id).map(ThemeTokens::from)
@@ -185,6 +307,7 @@ pub fn builtin_theme(id: String) -> Option<ThemeTokens> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::favorites::config_template;
 
     #[test]
     fn argb_is_opaque_rgb() {
@@ -213,5 +336,49 @@ mod tests {
             assert!(builtin_theme(id.to_owned()).is_some(), "{id}");
         }
         assert!(builtin_theme("nope".into()).is_none());
+    }
+
+    #[test]
+    fn catalog_adds_user_themes_and_reports_broken_files() {
+        let dir = std::env::temp_dir().join(format!("tl-themes-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let nord = include_str!("../tests/nord_copy.toml");
+        std::fs::write(
+            dir.join("mio.toml"),
+            nord.replace("id = \"nord\"", "id = \"mio\""),
+        )
+        .unwrap();
+        std::fs::write(dir.join("roto.toml"), "[meta\n").unwrap();
+        let list = theme_catalog(dir.display().to_string());
+        std::fs::remove_dir_all(&dir).unwrap();
+        let mio = list
+            .themes
+            .iter()
+            .find(|t| t.tokens.id == "mio")
+            .expect("tema de usuario");
+        assert!(mio.user);
+        assert!(
+            list.themes
+                .iter()
+                .any(|t| t.tokens.id == "consola" && t.tokens.glyphs.is_some())
+        );
+        assert_eq!(list.errors.len(), 1);
+        assert!(
+            list.errors[0].starts_with("roto.toml: "),
+            "{}",
+            list.errors[0]
+        );
+    }
+
+    #[test]
+    fn setting_resolves_and_rewrites_config() {
+        let text = config_template();
+        let mut setting = theme_setting(text.clone()).expect("plantilla válida");
+        assert_eq!(resolve_theme(setting.clone(), true), "nord");
+        setting.follow_system = true;
+        assert_eq!(resolve_theme(setting.clone(), false), "claro");
+        let updated = update_theme_setting(text, setting.clone()).expect("TOML válido");
+        assert_eq!(theme_setting(updated), Some(setting));
+        assert!(theme_setting("[theme".into()).is_none());
     }
 }

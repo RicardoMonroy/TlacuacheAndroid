@@ -36,6 +36,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -46,6 +47,8 @@ import io.github.ricardomonroy.tlacuache.ui.Shortcut
 import io.github.ricardomonroy.tlacuache.ui.WithTooltip
 import io.github.ricardomonroy.tlacuache.ui.theme.TlacuacheTheme
 import io.github.ricardomonroy.tlacuache.ui.theme.color
+import io.github.ricardomonroy.tlacuache.ui.theme.headerMuted
+import io.github.ricardomonroy.tlacuache.ui.theme.headerSelected
 
 private val TabWidth = 160.dp
 
@@ -118,7 +121,7 @@ fun TabMenuButton(
                 DropdownMenuItem(
                     text = {
                         Text(
-                            ui.volumeName ?: ui.dir.name,
+                            tabTitle(ui.volumeName ?: ui.dir.name),
                             color = if (index == tabs.active) t.colors.accent.color else t.colors.fg.color,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -150,6 +153,17 @@ fun TabMenuButton(
     }
 }
 
+/**
+ * Título de pestaña según el tema: `┤ nombre ├` con `bracket_titles` (`core::Theme::pane_title`) y en
+ * mayúsculas con `uppercase_headers` (THEMES.md §5.3).
+ */
+@Composable
+private fun tabTitle(name: String): String {
+    val style = TlacuacheTheme.tokens.style
+    val text = if (style.uppercaseHeaders) name.uppercase() else name
+    return if (style.bracketTitles) "┤ $text ├" else text
+}
+
 @Composable
 private fun TabButton(
     tab: TabState,
@@ -162,13 +176,13 @@ private fun TabButton(
 ) {
     val t = TlacuacheTheme.tokens
     val ui by tab.ui.collectAsStateWithLifecycle()
-    val title = ui.volumeName ?: ui.dir.name
+    val title = tabTitle(ui.volumeName ?: ui.dir.name)
     var menu by remember { mutableStateOf(false) }
     Box(
         Modifier
             .width(TabWidth)
             .height(40.dp)
-            .background(if (active) t.colors.paneBg.color else t.colors.headerBg.color, MaterialTheme.shapes.small)
+            .background(if (active) t.colors.headerSelected else t.colors.headerBg.color, MaterialTheme.shapes.small)
             .semantics { selected = active }
             .pointerInput(Unit) {
                 // Clic derecho: el menú de la pestaña.
@@ -204,8 +218,9 @@ private fun TabButton(
         Row(Modifier.padding(start = 12.dp).height(40.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 title,
-                color = if (active) t.colors.headerFg.color else t.colors.fgMuted.color,
+                color = if (active) t.colors.headerFg.color else t.colors.headerMuted,
                 style = MaterialTheme.typography.bodyMedium,
+                fontWeight = if (active) FontWeight.Bold else null,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
@@ -213,7 +228,7 @@ private fun TabButton(
             if (closable) {
                 val close = stringResource(R.string.tab_close)
                 IconButton(onClose, Modifier.semantics { contentDescription = close }) {
-                    Text("✕", color = t.colors.fgMuted.color, style = MaterialTheme.typography.bodySmall)
+                    Text("✕", color = t.colors.headerMuted, style = MaterialTheme.typography.bodySmall)
                 }
             }
         }
