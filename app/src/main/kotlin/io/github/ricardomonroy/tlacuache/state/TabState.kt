@@ -35,6 +35,8 @@ class TabState(
     /** Nombre visible del volumen cuya raíz es el archivo dado («Interno», «SD»…), o `null`. */
     private val volumeName: (File) -> String?,
     private val watcher: FolderWatcher,
+    /** Listar `Android/` en la raíz de los volúmenes (Preferencias). */
+    private val showAndroid: () -> Boolean = { false },
 ) {
     data class Ui(
         val dir: File,
@@ -203,8 +205,11 @@ class TabState(
 
     fun setIconView(on: Boolean) = _ui.update { it.copy(iconView = on) }
 
-    fun toggleHidden() {
-        _ui.update { it.copy(showHidden = !it.showHidden) }
+    fun toggleHidden() = setShowHidden(!_ui.value.showHidden)
+
+    fun setShowHidden(on: Boolean) {
+        if (_ui.value.showHidden == on) return
+        _ui.update { it.copy(showHidden = on) }
         rearrange()
     }
 
@@ -278,7 +283,7 @@ class TabState(
         job =
             scope.launch {
                 try {
-                    Listing.read(dir, isVolumeRoot(dir)).collect { read ->
+                    Listing.read(dir, isVolumeRoot(dir), showAndroid()).collect { read ->
                         entries = read
                         publish(read)
                     }

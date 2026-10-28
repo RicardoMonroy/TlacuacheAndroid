@@ -53,9 +53,10 @@ class ThemeStore(
 
     private val warned = mutableSetOf<String>()
 
-    suspend fun load() =
+    /** Lee catálogo y `[theme]`; [again] vuelve a leerlos (tras importar un `config.toml`). */
+    suspend fun load(again: Boolean = false) =
         withContext(Dispatchers.IO) {
-            if (_themes.value != null) return@withContext
+            if (_themes.value != null && !again) return@withContext
             themesDir.mkdirs()
             val list = themeCatalog(themesDir.path)
             ConfigLock.mutex.withLock {

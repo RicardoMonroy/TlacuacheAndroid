@@ -28,6 +28,7 @@ object Listing {
     fun read(
         dir: File,
         volumeRoot: Boolean,
+        showAndroid: Boolean = false,
     ): Flow<List<FileEntry>> =
         flow {
             val entries = ArrayList<FileEntry>()
@@ -36,7 +37,7 @@ object Listing {
                 for (path in stream) {
                     currentCoroutineContext().ensureActive()
                     val entry = entry(path)
-                    if (isExcluded(entry.name, entry.isDir, volumeRoot)) continue
+                    if (!showAndroid && isExcluded(entry.name, entry.isDir, volumeRoot)) continue
                     entries += entry
                     if (entries.size == nextEmit) {
                         emit(entries.toList())
@@ -68,9 +69,7 @@ object Listing {
 
     /**
      * `Android/` en la raíz de un volumen no se lista, ni con los ocultos visibles (ADR-A06): dentro solo
-     * hay datos de otras apps, de solo lectura en el mejor caso.
-     *
-     * shortcut: siempre excluida; mostrarla con aviso desde Preferencias llega en A5.2.
+     * hay datos de otras apps, de solo lectura en el mejor caso. Preferencias puede mostrarla, con aviso.
      */
     fun isExcluded(
         name: String,

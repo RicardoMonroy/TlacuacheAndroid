@@ -70,6 +70,7 @@ enum class Shortcut(
     TOGGLE_DUAL(R.string.menu_dual_pane, Group.WINDOW, Binding(Key.F3)),
     SIDEBAR(R.string.shortcut_sidebar, Group.WINDOW, Binding(Key.F9)),
     NEW_WINDOW(R.string.new_window, Group.WINDOW, Binding(Key.N, ctrl = true)),
+    PREFERENCES(R.string.prefs_menu, Group.WINDOW, Binding(Key.Comma, ctrl = true)),
     NEW_TAB(R.string.tab_new, Group.WINDOW, Binding(Key.T, ctrl = true)),
     CLOSE_TAB(R.string.tab_close, Group.WINDOW, Binding(Key.W, ctrl = true)),
     NEXT_TAB(R.string.shortcut_next_tab, Group.WINDOW, Binding(Key.Tab, ctrl = true)),
@@ -128,6 +129,7 @@ fun Shortcut.keysLabel(): String {
             Key.Backspace -> stringResource(R.string.key_backspace)
             Key.Delete -> stringResource(R.string.key_delete)
             Key.Tab -> "Tab"
+            Key.Comma -> ","
             else -> AndroidKeyEvent.keyCodeToString(b.key.nativeKeyCode).removePrefix("KEYCODE_")
         }
     return listOfNotNull(

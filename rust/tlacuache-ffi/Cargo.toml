@@ -19,5 +19,5 @@ cli = ["uniffi/cli"]
 
 [dependencies]
 # ADR-A02: core fijado a una etiqueta del repo público.
-tlacuache-core = { git = "https://github.com/RicardoMonroy/Tlacuache", tag = "v0.2.0" }
+tlacuache-core = { git = "https://github.com/RicardoMonroy/Tlacuache", tag = "v0.2.1" }
 uniffi = "0.32.2"

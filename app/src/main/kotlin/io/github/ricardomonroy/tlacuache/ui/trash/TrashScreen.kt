@@ -50,6 +50,7 @@ import io.github.ricardomonroy.tlacuache.storage.Volumes
 import io.github.ricardomonroy.tlacuache.ui.ops.DeleteConfirmation
 import io.github.ricardomonroy.tlacuache.ui.pane.FileIcon
 import io.github.ricardomonroy.tlacuache.ui.pane.rememberCategory
+import io.github.ricardomonroy.tlacuache.ui.theme.DialogSystemBars
 import io.github.ricardomonroy.tlacuache.ui.theme.TlacuacheTheme
 import io.github.ricardomonroy.tlacuache.ui.theme.color
 import kotlinx.coroutines.Dispatchers
@@ -78,6 +79,7 @@ fun TrashScreen(
     var confirmDelete by remember { mutableStateOf<TrashStore.Item?>(null) }
 
     Dialog(onClose, DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+        DialogSystemBars()
         Column(Modifier.fillMaxSize().background(t.colors.paneBg.color).windowInsetsPadding(WindowInsets.systemBars)) {
             Row(
                 Modifier.fillMaxWidth().background(t.colors.headerBg.color).padding(4.dp),

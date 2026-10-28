@@ -43,6 +43,7 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -95,6 +96,7 @@ import io.github.ricardomonroy.tlacuache.ui.ops.ClipboardPill
 import io.github.ricardomonroy.tlacuache.ui.ops.OpsConflictDialog
 import io.github.ricardomonroy.tlacuache.ui.ops.OpsIndicator
 import io.github.ricardomonroy.tlacuache.ui.ops.finishedMessage
+import io.github.ricardomonroy.tlacuache.ui.prefs.PreferencesScreen
 import io.github.ricardomonroy.tlacuache.ui.sidebar.Sidebar
 import io.github.ricardomonroy.tlacuache.ui.sidebar.SidebarItems
 import io.github.ricardomonroy.tlacuache.ui.sidebar.SidebarRail
@@ -144,6 +146,7 @@ fun PaneLayout(window: WindowViewModel) {
     // El gesto atrás cierra el cajón antes que nada; mientras está abierto ningún panel lo atiende.
     BackHandler(drawer.isOpen) { scope.launch { drawer.close() } }
     var showTrash by rememberSaveable { mutableStateOf(false) }
+    var showPrefs by rememberSaveable { mutableStateOf(false) }
     val t = TlacuacheTheme.tokens
     var rowWidth by remember { mutableFloatStateOf(1f) }
     // Cada panel conserva sitio para botones y ruta; en un teléfono horizontal el divisor apenas se mueve.
@@ -177,6 +180,7 @@ fun PaneLayout(window: WindowViewModel) {
         run(OpRequest(dropKind(files, dest, Volumes.roots(context)), files.map { it.path }, dest.path, emptyList()))
     }
     if (showTrash) TrashScreen(onClose = { showTrash = false }, run = remove)
+    if (showPrefs) PreferencesScreen(window) { showPrefs = false }
     val items =
         sidebarItems(window, active, onDrop = drop, onTrash = {
             showTrash = true
@@ -240,7 +244,7 @@ fun PaneLayout(window: WindowViewModel) {
     val import: (List<Uri>, File) -> Unit = { uris, dest ->
         run(OpRequest(OpKind.COPY, uris.map(Uri::toString), dest.path, emptyList()))
     }
-    CompositionLocalProvider(LocalDropImport provides import) {
+    CompositionLocalProvider(LocalDropImport provides import, LocalOpenPreferences provides { showPrefs = true }) {
         Box(
             Modifier.fillMaxSize().onPreviewKeyEvent {
                 // Ctrl y Shift al soltar un arrastre (copiar o mover): el evento de soltar no los trae.
@@ -285,6 +289,7 @@ fun PaneLayout(window: WindowViewModel) {
                                 Shortcut.PASTE -> paste()
                                 Shortcut.UNDO -> OpsRepository.undoLast(context)
                                 Shortcut.NEW_WINDOW -> MainActivity.openWindow(context, activeTabs.current.ui.value.dir)
+                                Shortcut.PREFERENCES -> showPrefs = true
                                 else -> return@onKeyEvent false
                             }
                             true
@@ -519,3 +524,6 @@ private fun PaneSwitcher(
         }
     }
 }
+
+/** Abrir Preferencias desde el menú ⋮ de cualquier panel; lo da la ventana. */
+val LocalOpenPreferences = compositionLocalOf<() -> Unit> { {} }

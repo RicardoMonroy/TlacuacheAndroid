@@ -176,8 +176,9 @@ Reglas:
 ## 12. Configuración (ADR-A11)
 
 - `filesDir/config.toml`, leído y escrito con `core::config` (mismas claves que Linux: `[general]`, `[preview]`, `[theme]`, `[[favorites]]`, `[keys]`; `[terminal]` se ignora). Si el TOML es inválido no se sobrescribe: defaults + aviso.
-- Preferencias propias de Android (densidad, layout por clase, recordar el panel A/B) en `SharedPreferences`.
-- Exportar/importar `config.toml` desde Preferencias.
+- `[general]` (mostrar ocultos y vista de las pestañas nuevas, doble panel inicial, preguntar antes de la papelera) se lee con `general_setting` y se reescribe con `update_general_setting` (core `update_general_toml`), con el mismo candado que favoritos y tema (`ConfigLock`). `default_view = "columns"` se usa como lista hasta A6.2.
+- Preferencias propias de Android (densidad, mostrar `Android/`) en `SharedPreferences` (`PreferencesStore`, uno por proceso).
+- Exportar/importar `config.toml` desde Preferencias con el selector del sistema (`CreateDocument`/`OpenDocument`, sin permisos). Importar valida con `config_error` (mensaje con línea) antes de reemplazar, y luego recarga favoritos, tema y `[general]`.
 
 ## 13. Errores y registro
 

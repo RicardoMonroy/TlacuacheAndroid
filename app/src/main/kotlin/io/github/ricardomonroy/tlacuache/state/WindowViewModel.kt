@@ -1,6 +1,7 @@
 package io.github.ricardomonroy.tlacuache.state
 
 import android.app.Application
+import android.net.Uri
 import android.os.Environment
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
@@ -13,9 +14,12 @@ import io.github.ricardomonroy.tlacuache.ffi.OpRequest
 import io.github.ricardomonroy.tlacuache.ffi.SessionPane
 import io.github.ricardomonroy.tlacuache.ffi.SessionState
 import io.github.ricardomonroy.tlacuache.ffi.SessionTab
+import io.github.ricardomonroy.tlacuache.ffi.ViewMode
 import io.github.ricardomonroy.tlacuache.ops.OpsRepository
 import io.github.ricardomonroy.tlacuache.storage.FavoritesStore
+import io.github.ricardomonroy.tlacuache.storage.PreferencesStore
 import io.github.ricardomonroy.tlacuache.storage.SessionStore
+import io.github.ricardomonroy.tlacuache.storage.ThemeStore
 import io.github.ricardomonroy.tlacuache.storage.TrashStore
 import io.github.ricardomonroy.tlacuache.storage.Volume
 import io.github.ricardomonroy.tlacuache.storage.Volumes
@@ -28,6 +32,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
@@ -58,13 +63,27 @@ class WindowViewModel(
     /** La ventana principal restaura y guarda la sesión; las abiertas en una carpeta (A4.5) no la tocan. */
     private val mainWindow = savedState.get<String>(EXTRA_PATH) == null
 
-    private fun newTab(dir: File) =
+    private val preferences = PreferencesStore.shared(app)
+
+    /** Pestaña en [dir] tal cual (la sesión le pone su vista y ocultos). */
+    private fun tabAt(dir: File) =
         TabState(
             scope = viewModelScope,
             dir = dir,
             volumeName = ::volumeName,
             watcher = fileObserverWatcher,
+            showAndroid = { preferences.showAndroid.value },
         )
+
+    /** Pestaña nueva con la vista y los ocultos de `[general]` (Preferencias). */
+    private fun newTab(dir: File) = tabAt(dir).apply(::applyDefaults)
+
+    private fun applyDefaults(tab: TabState) {
+        val general = preferences.general.value
+        tab.setShowHidden(general.showHidden)
+        // `columns` (Miller, A6.2) aún no existe en Android: lista.
+        tab.setIconView(general.defaultView == ViewMode.ICONS)
+    }
 
     /** Paneles A y B: siempre existen los dos, se vean o no (ADR-A08). */
     val panes = listOf(PaneState(startDir, ::newTab), PaneState(startDir, ::newTab))
@@ -132,6 +151,44 @@ class WindowViewModel(
     /** Avisos breves de la ventana (texto de `strings.xml`) para un `Snackbar`. */
     val notices: SharedFlow<Int> = _notices.asSharedFlow()
 
+    /**
+     * Reemplaza `config.toml` por uno elegido (p. ej. el de Linux) y aplica al momento sus favoritos, tema y
+     * `[general]`; si no es válido, avisa con su error y no toca nada.
+     */
+    fun importConfig(
+        uri: Uri,
+        /** Aviso para quien lo pidió: Preferencias tapa los avisos de la ventana. */
+        onNotice: (Int) -> Unit,
+        onInvalid: (String) -> Unit,
+    ) {
+        viewModelScope.launch {
+            when (val result = preferences.import(uri)) {
+                PreferencesStore.ImportResult.Ok -> {
+                    favoritesStore.load()
+                    ThemeStore.shared(getApplication<Application>().filesDir).load(again = true)
+                    onNotice(R.string.prefs_import_done)
+                }
+
+                is PreferencesStore.ImportResult.Invalid -> {
+                    onInvalid(result.message)
+                }
+
+                PreferencesStore.ImportResult.Failed -> {
+                    onNotice(R.string.prefs_import_failed)
+                }
+            }
+        }
+    }
+
+    fun exportConfig(
+        uri: Uri,
+        onNotice: (Int) -> Unit,
+    ) {
+        viewModelScope.launch {
+            onNotice(if (preferences.export(uri)) R.string.prefs_export_done else R.string.prefs_export_failed)
+        }
+    }
+
     /** Cambia los favoritos y guarda; un fallo al guardar se avisa aquí, el resto lo decide [onResult]. */
     fun editFavorites(
         change: (Favorites) -> Unit,
@@ -194,9 +251,26 @@ class WindowViewModel(
         // Purga al arrancar: lo que lleva más de 30 días en la papelera (ADR-A05).
         viewModelScope.launch(Dispatchers.IO) { TrashStore({ Volumes.roots(app) }).purge() }
         viewModelScope.launch {
+            preferences.load()
             // Una ventana abierta en una carpeta concreta (A4.5) no restaura la sesión.
-            if (mainWindow) sessionStore.load()?.let(::restore)
+            val session = if (mainWindow) sessionStore.load() else null
+            if (session != null) {
+                restore(session)
+            } else {
+                // Sin sesión: las pestañas iniciales y el doble panel salen de Preferencias.
+                _dual.value = preferences.general.value.dualPane
+                panes.forEach { applyDefaults(it.tabs.value.current) }
+            }
             _ready.value = true
+        }
+        // Mostrar u ocultar `Android/` se ve al momento en las pestañas abiertas.
+        viewModelScope.launch {
+            preferences.showAndroid.drop(1).collect {
+                panes.forEach { p ->
+                    p.tabs.value.list
+                        .forEach(TabState::reload)
+                }
+            }
         }
     }
 
@@ -208,9 +282,9 @@ class WindowViewModel(
             if (saved.tabs.isNotEmpty()) {
                 val tabs =
                     saved.tabs.map { t ->
-                        newTab(File(t.path)).apply {
+                        tabAt(File(t.path)).apply {
                             setIconView(t.iconView)
-                            if (t.showHidden) toggleHidden()
+                            setShowHidden(t.showHidden)
                         }
                     }
                 pane.restore(tabs, saved.selected.toInt())

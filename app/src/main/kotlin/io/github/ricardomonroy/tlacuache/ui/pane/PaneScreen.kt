@@ -91,6 +91,7 @@ import io.github.ricardomonroy.tlacuache.state.BackStep
 import io.github.ricardomonroy.tlacuache.state.PaneState
 import io.github.ricardomonroy.tlacuache.state.PathInput
 import io.github.ricardomonroy.tlacuache.state.TabState
+import io.github.ricardomonroy.tlacuache.storage.PreferencesStore
 import io.github.ricardomonroy.tlacuache.ui.Shortcut
 import io.github.ricardomonroy.tlacuache.ui.WithTooltip
 import io.github.ricardomonroy.tlacuache.ui.ops.DeleteConfirmation
@@ -211,6 +212,9 @@ private fun TabScreen(
     var filterOpen by rememberSaveable { mutableStateOf(false) }
     var moreMenu by remember { mutableStateOf(false) }
     var themeDialog by remember { mutableStateOf(false) }
+    val openPreferences = LocalOpenPreferences.current
+    val confirmTrash by PreferencesStore.shared(LocalContext.current).general.collectAsStateWithLifecycle()
+    var trashTargets by remember { mutableStateOf<List<File>?>(null) }
     // Borrar permanentemente siempre pide confirmación (CLAUDE.md, regla 6).
     var confirmDelete by remember { mutableStateOf<List<File>?>(null) }
     // Diálogo de nombre abierto: renombrar este elemento, o crear una carpeta o un archivo vacío.
@@ -279,8 +283,13 @@ private fun TabScreen(
                 }
 
                 action == FileAction.TRASH -> {
-                    chrome.onRemove(OpKind.TRASH, targets)
-                    tab.clearSelection()
+                    // `confirm_trash` de config.toml: preguntar antes (se puede restaurar, así que por defecto no).
+                    if (confirmTrash.confirmTrash) {
+                        trashTargets = targets
+                    } else {
+                        chrome.onRemove(OpKind.TRASH, targets)
+                        tab.clearSelection()
+                    }
                     true
                 }
 
@@ -357,6 +366,20 @@ private fun TabScreen(
         val base = if (directory) newFolderName else newFileName
         val name = nextFreeName(base, directory, ui.visible.map { it.name })
         naming = Naming(if (directory) OpKind.MKDIR else OpKind.CREATE_FILE, name, directory)
+    }
+    trashTargets?.let { targets ->
+        DeleteConfirmation(
+            targets,
+            R.string.trash_confirm_title,
+            text = R.plurals.trash_confirm_text,
+            confirm = R.string.trash_confirm,
+            danger = false,
+            onDismiss = { trashTargets = null },
+        ) {
+            chrome.onRemove(OpKind.TRASH, targets)
+            tab.clearSelection()
+            trashTargets = null
+        }
     }
     confirmDelete?.let { targets ->
         DeleteConfirmation(targets, onDismiss = { confirmDelete = null }) {
@@ -664,6 +687,13 @@ private fun TabScreen(
                             onClick = {
                                 moreMenu = false
                                 themeDialog = true
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.prefs_menu)) },
+                            onClick = {
+                                moreMenu = false
+                                openPreferences()
                             },
                         )
                     }

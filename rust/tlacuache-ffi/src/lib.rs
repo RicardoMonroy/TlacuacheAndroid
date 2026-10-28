@@ -13,6 +13,7 @@ mod names;
 mod ops;
 mod path_input;
 mod session;
+mod settings;
 mod summary;
 mod theme;
 mod usage;

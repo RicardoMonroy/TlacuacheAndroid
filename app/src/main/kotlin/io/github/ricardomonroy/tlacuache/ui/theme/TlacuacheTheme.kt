@@ -9,13 +9,17 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogWindowProvider
+import androidx.core.view.WindowCompat
 import io.github.ricardomonroy.tlacuache.R
 import io.github.ricardomonroy.tlacuache.ffi.ThemeColors
 import io.github.ricardomonroy.tlacuache.ffi.ThemeTokens
@@ -118,3 +122,21 @@ private fun Typography.withFamily(family: FontFamily) =
         labelMedium = labelMedium.copy(fontFamily = family),
         labelSmall = labelSmall.copy(fontFamily = family),
     )
+
+/**
+ * Para pantallas que son un `Dialog` a pantalla completa (Papelera, Preferencias): el diálogo tiene su
+ * propia ventana y no hereda el estilo de barras de la actividad; con un tema claro sus íconos salían
+ * blancos sobre blanco.
+ */
+@Composable
+fun DialogSystemBars() {
+    val view = LocalView.current
+    val dark = TlacuacheTheme.tokens.dark
+    val window = (view.parent as? DialogWindowProvider)?.window ?: return
+    SideEffect {
+        WindowCompat.getInsetsController(window, view).apply {
+            isAppearanceLightStatusBars = !dark
+            isAppearanceLightNavigationBars = !dark
+        }
+    }
+}

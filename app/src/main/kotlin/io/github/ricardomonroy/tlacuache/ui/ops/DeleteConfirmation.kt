@@ -27,6 +27,10 @@ import java.io.File
 fun DeleteConfirmation(
     files: List<File>,
     title: Int = R.string.delete_confirm_title,
+    text: Int = R.plurals.delete_confirm_text,
+    confirm: Int = R.string.delete_confirm,
+    /** Botón en color de error: solo para lo que no se deshace. */
+    danger: Boolean = true,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
 ) {
@@ -34,7 +38,7 @@ fun DeleteConfirmation(
     val bytes by produceState<Long?>(null, files) {
         value = withContext(Dispatchers.IO) { measure(files) { isActive }.bytes }
     }
-    val count = pluralStringResource(R.plurals.delete_confirm_text, files.size, files.size)
+    val count = pluralStringResource(text, files.size, files.size)
     val size = bytes?.let { stringResource(R.string.delete_confirm_size, Formatter.formatFileSize(context, it)) }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -42,7 +46,8 @@ fun DeleteConfirmation(
         text = { Text(listOfNotNull(count, size).joinToString(" ")) },
         confirmButton = {
             TextButton(onConfirm) {
-                Text(stringResource(R.string.delete_confirm), color = TlacuacheTheme.tokens.colors.error.color)
+                val colors = TlacuacheTheme.tokens.colors
+                Text(stringResource(confirm), color = (if (danger) colors.error else colors.accent).color)
             }
         },
         dismissButton = { TextButton(onDismiss) { Text(stringResource(R.string.ops_cancel)) } },
