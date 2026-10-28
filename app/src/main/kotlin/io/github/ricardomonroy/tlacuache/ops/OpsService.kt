@@ -26,6 +26,7 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.sample
 import kotlinx.coroutines.launch
 import java.io.File
@@ -45,7 +46,13 @@ class OpsService : Service() {
         super.onCreate()
         val channel =
             NotificationChannel(CHANNEL, getString(R.string.ops_channel), NotificationManager.IMPORTANCE_LOW)
-        getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+        val attention =
+            NotificationChannel(
+                ATTENTION_CHANNEL,
+                getString(R.string.ops_attention_channel),
+                NotificationManager.IMPORTANCE_HIGH,
+            )
+        getSystemService(NotificationManager::class.java).createNotificationChannels(listOf(channel, attention))
         wakeLock =
             getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "Tlacuache:ops")
     }
@@ -79,10 +86,32 @@ class OpsService : Service() {
                                     NOTIFY_MS,
                                 ).collect { manager.notify(NOTIFICATION_ID, notification(it)) }
                         }
+                    // Un conflicto sin ninguna ventana visible: aviso aparte que abre la app y su diálogo.
+                    val attention =
+                        launch {
+                            val manager = getSystemService(NotificationManager::class.java)
+                            OpsRepository.conflict
+                                .combine(OpsRepository.visibleWindows) { c, visible ->
+                                    c.takeIf {
+                                        visible ==
+                                            0
+                                    }
+                                }.collect {
+                                    if (it ==
+                                        null
+                                    ) {
+                                        manager.cancel(ATTENTION_ID)
+                                    } else {
+                                        manager.notify(ATTENTION_ID, attention(it))
+                                    }
+                                }
+                        }
                     try {
                         OpsRepository.drain(this@OpsService, ::scan)
                     } finally {
                         notifications.cancel()
+                        attention.cancel()
+                        getSystemService(NotificationManager::class.java).cancel(ATTENTION_ID)
                         if (wakeLock.isHeld) wakeLock.release()
                         ServiceCompat.stopForeground(this@OpsService, ServiceCompat.STOP_FOREGROUND_REMOVE)
                         // Si llegó otra operación mientras terminaba, su arranque es más nuevo y no se detiene.
@@ -117,6 +146,25 @@ class OpsService : Service() {
     private fun scan(files: List<File>) {
         if (files.isNotEmpty()) MediaScannerConnection.scanFile(this, files.map { it.path }.toTypedArray(), null, null)
     }
+
+    private fun openApp() =
+        PendingIntent.getActivity(
+            this,
+            0,
+            Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
+            PendingIntent.FLAG_IMMUTABLE,
+        )
+
+    private fun attention(pending: OpsRepository.PendingConflict): Notification =
+        NotificationCompat
+            .Builder(this, ATTENTION_CHANNEL)
+            .setSmallIcon(R.drawable.ic_notification_ops)
+            .setContentTitle(getString(R.string.ops_attention_title))
+            .setContentText(getString(R.string.ops_attention_text, pending.conflict.existing.name))
+            .setContentIntent(openApp())
+            .setAutoCancel(true)
+            .setCategory(NotificationCompat.CATEGORY_STATUS)
+            .build()
 
     private fun notification(ops: List<Operation>): Notification {
         val running = ops.firstOrNull { it.state == OpState.Running || it.state == OpState.Cancelling }
@@ -174,6 +222,8 @@ class OpsService : Service() {
 
     companion object {
         private const val CHANNEL = "ops"
+        private const val ATTENTION_CHANNEL = "ops_attention"
+        private const val ATTENTION_ID = 2
         private const val NOTIFICATION_ID = 1
         private const val ACTION_CANCEL = "io.github.ricardomonroy.tlacuache.ops.CANCEL"
         private const val EXTRA_ID = "id"

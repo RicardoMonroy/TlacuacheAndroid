@@ -4,9 +4,11 @@ import io.github.ricardomonroy.tlacuache.ffi.ConflictAction
 import io.github.ricardomonroy.tlacuache.ffi.ConflictPolicy
 import io.github.ricardomonroy.tlacuache.ffi.Journal
 import io.github.ricardomonroy.tlacuache.ffi.MovedItem
+import io.github.ricardomonroy.tlacuache.ffi.Newer
 import io.github.ricardomonroy.tlacuache.ffi.OpKind
 import io.github.ricardomonroy.tlacuache.ffi.Operation
 import io.github.ricardomonroy.tlacuache.ffi.Progress
+import io.github.ricardomonroy.tlacuache.ffi.newer
 import io.github.ricardomonroy.tlacuache.ffi.nextFreeName
 import io.github.ricardomonroy.tlacuache.ffi.replaceAllowed
 import io.github.ricardomonroy.tlacuache.storage.Protected
@@ -44,7 +46,33 @@ class OpsRunner(
         val source: File,
         val existing: File,
         val replaceAllowed: Boolean,
-    )
+        /** Lo que llega y lo que ya está, leídos en IO para que el diálogo los compare. */
+        val incoming: Side,
+        val current: Side,
+        /** Cuál es más reciente (`core::ops::newer`, con un segundo de margen); `null` si falta una fecha. */
+        val newer: Newer?,
+    ) {
+        constructor(source: File, existing: File, replaceAllowed: Boolean) : this(
+            source,
+            existing,
+            replaceAllowed,
+            Side.of(source),
+            Side.of(existing),
+            newer(Side.of(existing).modifiedMs, Side.of(source).modifiedMs),
+        )
+    }
+
+    /** Un lado del conflicto: carpeta o archivo, tamaño (archivos) y fecha de modificación. */
+    data class Side(
+        val isDir: Boolean,
+        val size: Long,
+        val modifiedMs: Long?,
+    ) {
+        companion object {
+            fun of(f: File) =
+                Side(f.isDirectory, if (f.isDirectory) 0 else f.length(), f.lastModified().takeIf { it > 0 })
+        }
+    }
 
     data class Decision(
         val action: ConflictAction,

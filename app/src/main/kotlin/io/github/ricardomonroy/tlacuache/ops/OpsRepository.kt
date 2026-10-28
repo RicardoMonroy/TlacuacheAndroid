@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import java.io.File
 import java.io.IOException
@@ -44,6 +45,15 @@ object OpsRepository {
 
     private val _conflict = MutableStateFlow<PendingConflict?>(null)
     val conflict: StateFlow<PendingConflict?> = _conflict.asStateFlow()
+
+    private val _visibleWindows = MutableStateFlow(0)
+
+    /** Ventanas de la app visibles; sin ninguna, un conflicto se avisa con una notificación (ARCHITECTURE §7). */
+    val visibleWindows: StateFlow<Int> = _visibleWindows.asStateFlow()
+
+    fun windowShown() = _visibleWindows.update { it + 1 }
+
+    fun windowHidden() = _visibleWindows.update { (it - 1).coerceAtLeast(0) }
 
     private val _finished = MutableSharedFlow<Operation>(extraBufferCapacity = 8)
 

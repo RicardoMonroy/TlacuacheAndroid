@@ -131,7 +131,7 @@ Reglas:
   - **Papelera / Restaurar**: `TrashStore` (§8). **Borrar**: recursivo, solo tras confirmación en la UI.
   - Cada operación devuelve un `Journal` del core; Deshacer usa `core::ops::undo_request`.
   - Fuentes `content://` (arrastre o pegado desde otras apps): se copian por `ContentResolver.openInputStream` con el nombre de `OpenableColumns.DISPLAY_NAME`.
-- **Conflictos**: el runner suspende y pide una decisión a la UI por un canal (`CompletableDeferred<ConflictAction>`, expuesto como `OpsRepository.conflict`; cerrar el diálogo cancela la operación); la política «aplicar a todos» vive en `core::ops::ConflictPolicy`. Si no hay ninguna ventana visible, la notificación cambia a «Se necesita tu decisión» y abre la app.
+- **Conflictos**: el runner suspende y pide una decisión a la UI por un canal (`CompletableDeferred<ConflictAction>`, expuesto como `OpsRepository.conflict`; cerrar el diálogo cancela la operación); la política «aplicar a todos» vive en `core::ops::ConflictPolicy`. Si no hay ninguna ventana visible (`OpsRepository.visibleWindows`, contado en `onStart`/`onStop`), una segunda notificación de prioridad alta «Se necesita tu decisión» abre la app con el diálogo; se retira al volver o al responder.
 - Antes de ejecutar, cada origen y destino pasa por `Protected.kt`: una operación que toque una carpeta protegida se rechaza con un mensaje claro.
 
 ## 8. Papelera propia (ADR-A05)

@@ -20,6 +20,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil3.compose.setSingletonImageLoaderFactory
 import io.github.ricardomonroy.tlacuache.ffi.builtinTheme
 import io.github.ricardomonroy.tlacuache.ffi.defaultThemeId
+import io.github.ricardomonroy.tlacuache.ops.OpsRepository
 import io.github.ricardomonroy.tlacuache.state.WindowViewModel
 import io.github.ricardomonroy.tlacuache.storage.StorageAccess
 import io.github.ricardomonroy.tlacuache.ui.pane.PaneLayout
@@ -28,6 +29,16 @@ import io.github.ricardomonroy.tlacuache.ui.theme.TlacuacheTheme
 import io.github.ricardomonroy.tlacuache.ui.welcome.WelcomeScreen
 
 class MainActivity : ComponentActivity() {
+    override fun onStart() {
+        super.onStart()
+        OpsRepository.windowShown()
+    }
+
+    override fun onStop() {
+        OpsRepository.windowHidden()
+        super.onStop()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // El tema predeterminado va embebido en el core y sus pruebas lo validan: nulo sería un error de build.
         val tokens = requireNotNull(builtinTheme(defaultThemeId())) { "tema predeterminado ausente" }

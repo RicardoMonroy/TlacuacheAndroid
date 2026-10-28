@@ -1,13 +1,16 @@
 package io.github.ricardomonroy.tlacuache.ui.ops
 
+import android.text.format.Formatter
 import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -17,23 +20,31 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.ricardomonroy.tlacuache.R
 import io.github.ricardomonroy.tlacuache.ffi.ConflictAction
+import io.github.ricardomonroy.tlacuache.ffi.Newer
 import io.github.ricardomonroy.tlacuache.ffi.OpKind
 import io.github.ricardomonroy.tlacuache.ffi.OpState
 import io.github.ricardomonroy.tlacuache.ffi.Operation
 import io.github.ricardomonroy.tlacuache.ops.OpsRepository
 import io.github.ricardomonroy.tlacuache.ops.OpsRunner
+import io.github.ricardomonroy.tlacuache.ui.theme.TlacuacheTheme
+import io.github.ricardomonroy.tlacuache.ui.theme.color
+import java.text.DateFormat
+import java.util.Date
 
 /**
  * Conflicto de la operación en curso: Reemplazar (Combinar con carpetas), Omitir o Conservar ambos, con
- * «Aplicar a todos» (`core::ops::ConflictPolicy`). Cerrarlo cancela la operación.
+ * «Aplicar a todos» (`core::ops::ConflictPolicy`). Cancelar o el gesto atrás cancelan la operación.
  *
- * shortcut: sin comparar tamaños ni fechas (`newer`) ni aviso por notificación si no hay ventana visible.
+ * Compara tamaño y fecha de los dos y marca el más reciente (`core::ops::newer`). Si no hay ninguna ventana
+ * visible, `OpsService` avisa con una notificación que abre la app.
  */
 @Composable
 fun OpsConflictDialog() {
@@ -47,9 +58,13 @@ fun OpsConflictDialog() {
             OpsRepository.cancel(p.opId)
             answer(ConflictAction.SKIP)
         },
+        // Un toque fuera (o al volver desde la notificación) no decide nada; atrás equivale a Cancelar.
+        properties = DialogProperties(dismissOnClickOutside = false),
         title = { Text(stringResource(R.string.conflict_title, c.existing.name)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                SideRow(R.string.conflict_current, c.current, c.newer == Newer.EXISTING)
+                SideRow(R.string.conflict_incoming, c.incoming, c.newer == Newer.INCOMING)
                 if (c.replaceAllowed) {
                     Choice(if (c.source.isDirectory) R.string.conflict_merge else R.string.conflict_replace) {
                         answer(ConflictAction.REPLACE)
@@ -76,6 +91,43 @@ fun OpsConflictDialog() {
             }) { Text(stringResource(R.string.ops_cancel)) }
         },
     )
+}
+
+/** «En el destino: 4.0 MB · 27/10/26 18:29 · más reciente». */
+@Composable
+private fun SideRow(
+    @StringRes label: Int,
+    side: OpsRunner.Side,
+    newest: Boolean,
+) {
+    val t = TlacuacheTheme.tokens
+    val context = LocalContext.current
+    val parts =
+        listOfNotNull(
+            if (side.isDir) {
+                stringResource(
+                    R.string.conflict_folder,
+                )
+            } else {
+                Formatter.formatShortFileSize(context, side.size)
+            },
+            side.modifiedMs?.let {
+                DateFormat
+                    .getDateTimeInstance(
+                        DateFormat.SHORT,
+                        DateFormat.SHORT,
+                    ).format(Date(it))
+            },
+            if (newest) stringResource(R.string.conflict_newer) else null,
+        )
+    Column(Modifier.padding(bottom = 4.dp)) {
+        Text(stringResource(label), color = t.colors.fgMuted.color, style = MaterialTheme.typography.labelMedium)
+        Text(
+            parts.joinToString(" · "),
+            color = if (newest) t.colors.accent.color else t.colors.fg.color,
+            style = MaterialTheme.typography.bodyMedium,
+        )
+    }
 }
 
 @Composable

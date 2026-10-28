@@ -139,6 +139,13 @@
     <string name="ops_failed_size">La copia no quedó completa; se descartó.</string>
     <string name="ops_failed_io">No se pudo completar la operación (sin espacio, sin permiso o el volumen se retiró).</string>
     <string name="conflict_title">«%1$s» ya existe</string>
+    <string name="conflict_current">En el destino</string>
+    <string name="conflict_incoming">El que llega</string>
+    <string name="conflict_folder">Carpeta</string>
+    <string name="conflict_newer">más reciente</string>
+    <string name="ops_attention_channel">Decisiones de operaciones</string>
+    <string name="ops_attention_title">Se necesita tu decisión</string>
+    <string name="ops_attention_text">«%1$s» ya existe en el destino.</string>
     <string name="conflict_replace">Reemplazar</string>
     <string name="conflict_merge">Combinar</string>
     <string name="conflict_skip">Omitir</string>
