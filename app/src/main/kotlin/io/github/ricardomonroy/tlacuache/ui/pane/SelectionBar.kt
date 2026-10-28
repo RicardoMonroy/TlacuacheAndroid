@@ -1,6 +1,7 @@
 package io.github.ricardomonroy.tlacuache.ui.pane
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -90,6 +91,34 @@ fun SelectionBar(
                     )
                 }
             }
+        }
+    }
+}
+
+/**
+ * Barra inferior de la selección con un solo panel visible (UI_SPEC §4): «Copiar a B», «Mover a B» y
+ * Compartir si hay archivos.
+ *
+ * shortcut: Papelera llega con A3.5.
+ */
+@Composable
+fun SelectionActions(
+    ui: TabState.Ui,
+    otherPane: String,
+    onAction: (FileAction) -> Unit,
+) {
+    val t = TlacuacheTheme.tokens
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .background(t.colors.headerBg.color)
+            .padding(horizontal = 4.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+    ) {
+        TextButton({ onAction(FileAction.COPY_TO_OTHER) }) { Text(stringResource(R.string.copy_to_pane, otherPane)) }
+        TextButton({ onAction(FileAction.MOVE_TO_OTHER) }) { Text(stringResource(R.string.move_to_pane, otherPane)) }
+        if (ui.selection.any { !it.isDir }) {
+            TextButton({ onAction(FileAction.SHARE) }) { Text(stringResource(R.string.action_share)) }
         }
     }
 }

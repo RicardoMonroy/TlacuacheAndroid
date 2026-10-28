@@ -101,12 +101,20 @@ class TabState(
     fun startWatching() {
         watch?.stop()
         watch = watcher(_ui.value.dir) { changes.tryEmit(Unit) }
+        // Sin vigilar (segundo plano, panel oculto, rotación) pudo cambiar algo sin aviso: se relee.
+        if (missedChanges) {
+            missedChanges = false
+            reload()
+        }
     }
 
     fun stopWatching() {
+        if (watch != null) missedChanges = true
         watch?.stop()
         watch = null
     }
+
+    private var missedChanges = false
 
     /** Entra a [entry] si es carpeta. Abrir archivos llega en A1.6. */
     fun open(entry: FileEntry) {

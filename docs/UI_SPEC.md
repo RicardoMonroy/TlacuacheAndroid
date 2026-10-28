@@ -82,6 +82,7 @@ La app distingue el tipo de puntero de cada evento (`PointerType.Touch` / `Mouse
 ## 4. Copiar y mover entre paneles (lo central)
 
 - **Franja central** (media y expandida, solo en modo dual): botones verticales **Copiar →** y **Mover →** cuyas flechas apuntan del panel activo al otro; deshabilitados sin selección. Debajo, **Pegar** si hay algo en el portapapeles interno.
+- La franja también es el divisor: se arrastra para cambiar la proporción. Con un solo panel visible (compacta o modo dual apagado) no hay franja y la barra inferior de la selección dice el destino: «Copiar a B · Mover a B · Compartir».
 - **Barra contextual** (con selección): Copiar al otro panel, Mover al otro panel, Renombrar, Compartir, Papelera y ⋯ (Copiar, Cortar, Abrir con…, Añadir a favoritos, Copiar ruta, Propiedades, Borrar permanentemente). En compacta los textos dicen el destino: «Copiar a B».
 - **Arrastrar y soltar**: entre paneles (copia en volúmenes distintos, mueve en el mismo volumen; con Ctrl fuerza copiar y con Shift fuerza mover; al soltar con el botón derecho se pregunta), a una carpeta de la lista, a un favorito o volumen de la barra lateral, y hacia/desde otras apps en multiventana o escritorio.
 - **Portapapeles interno** (MVP): Copiar/Cortar y luego Pegar en cualquier carpeta o pestaña. Una píldora «3 elementos para pegar · Pegar · ✕» queda visible mientras haya algo.

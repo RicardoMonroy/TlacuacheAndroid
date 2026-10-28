@@ -154,6 +154,17 @@ class TabStateTest {
     }
 
     @Test
+    fun rereadsWhatChangedWhileNotWatching() {
+        tab.startWatching()
+        awaitUi { !it.loading && names() == listOf("DCIM") }
+        tab.stopWatching()
+        // Panel oculto o app en segundo plano: el cambio no genera aviso.
+        File(root, "nuevo.txt").writeText("x")
+        tab.startWatching()
+        awaitUi { names() == listOf("DCIM", "nuevo.txt") }
+    }
+
+    @Test
     fun navigatingClearsFilterButKeepsHidden() {
         tab.toggleHidden()
         tab.setQuery("dc")

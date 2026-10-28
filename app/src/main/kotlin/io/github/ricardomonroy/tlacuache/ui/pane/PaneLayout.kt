@@ -6,13 +6,16 @@ import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.WindowInsetsSides
@@ -62,6 +65,7 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
@@ -140,6 +144,14 @@ fun PaneLayout(window: WindowViewModel) {
         }
         window.transfer(kind, files, target)
     }
+    // Franja central y F5/F6: la selección del panel activo al otro (UI_SPEC §4).
+    val activeTabs by window.panes[active].tabs.collectAsStateWithLifecycle()
+    val activeUi by activeTabs.current.ui.collectAsStateWithLifecycle()
+    val transferSelection: (OpKind) -> Unit = { kind ->
+        val ui = activeTabs.current.ui.value
+        transfer(kind, ui.selection.map { File(ui.dir, it.name) }, 1 - active)
+        activeTabs.current.clearSelection()
+    }
     OpsConflictDialog()
     val snackbar = remember { SnackbarHostState() }
     val resources = LocalResources.current
@@ -177,7 +189,7 @@ fun PaneLayout(window: WindowViewModel) {
                             if (permanentFits) window.toggleSidebar() else toggleDrawer()
                             true
                         } else {
-                            handleWindowKey(event, window, wide)
+                            handleWindowKey(event, window, wide, transferSelection)
                         }
                     },
             ) {
@@ -198,7 +210,11 @@ fun PaneLayout(window: WindowViewModel) {
                     if (wide && dual) {
                         window.panes.forEachIndexed { i, pane ->
                             if (i == 1) {
-                                PaneDivider { window.moveSplit(it / rowWidth, minSplit) }
+                                PaneStrip(
+                                    fromA = active == 0,
+                                    enabled = activeUi.selecting,
+                                    onTransfer = transferSelection,
+                                ) { window.moveSplit(it / rowWidth, minSplit) }
                             }
                             PaneScreen(
                                 pane,
@@ -226,6 +242,7 @@ fun PaneLayout(window: WindowViewModel) {
                             onToggleDual = window::toggleDual,
                             onAddFavorite = window::addFavorite,
                             onTransfer = { kind, files -> transfer(kind, files, 1 - active) },
+                            otherPane = if (active == 0) "B" else "A",
                             modifier = Modifier.weight(1f),
                         )
                     }
@@ -260,36 +277,79 @@ private fun DrawerButton(onClick: () -> Unit) {
     }
 }
 
-/** Tab cambia de panel; F3 alterna 1/2 paneles, o A/B en compacta (UI_SPEC §8). */
+/** Tab cambia de panel; F3 alterna 1/2 paneles, o A/B en compacta; F5/F6 copian/mueven al otro (UI_SPEC §8). */
 private fun handleWindowKey(
     event: KeyEvent,
     window: WindowViewModel,
     wide: Boolean,
+    transferSelection: (OpKind) -> Unit,
 ): Boolean {
     if (event.type != KeyEventType.KeyDown) return false
     if (event.isCtrlPressed || event.isAltPressed || event.isMetaPressed || event.isShiftPressed) return false
     when (event.key) {
         Key.Tab -> window.activateOther()
         Key.F3 -> if (wide) window.toggleDual() else window.activateOther()
+        Key.F5 -> transferSelection(OpKind.COPY)
+        Key.F6 -> transferSelection(OpKind.MOVE)
         else -> return false
     }
     return true
 }
 
-/** Divisor entre paneles: línea de 1 dp con zona de arrastre de 12 dp. */
+/**
+ * Franja central entre paneles (UI_SPEC §4): **Copiar** y **Mover** con la flecha del panel activo al otro,
+ * deshabilitados sin selección. También es el divisor: se arrastra para cambiar la proporción.
+ */
 @Composable
-private fun PaneDivider(onDrag: (Float) -> Unit) {
+private fun PaneStrip(
+    fromA: Boolean,
+    enabled: Boolean,
+    onTransfer: (OpKind) -> Unit,
+    onDrag: (Float) -> Unit,
+) {
     val t = TlacuacheTheme.tokens
     Box(
         Modifier
             .fillMaxHeight()
-            .width(12.dp)
+            .width(StripWidth)
             .background(t.colors.headerBg.color)
             .pointerHoverIcon(PointerIcon(android.view.PointerIcon.TYPE_HORIZONTAL_DOUBLE_ARROW))
             .draggable(rememberDraggableState(onDrag), Orientation.Horizontal),
         contentAlignment = Alignment.Center,
     ) {
         Box(Modifier.fillMaxHeight().width(1.dp).background(t.colors.borderStrong.color))
+        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            val arrow = if (fromA) "→" else "←"
+            StripButton(arrow, R.string.strip_copy, R.string.action_copy_to_other, enabled) { onTransfer(OpKind.COPY) }
+            StripButton(arrow, R.string.strip_move, R.string.action_move_to_other, enabled) { onTransfer(OpKind.MOVE) }
+        }
+    }
+}
+
+private val StripWidth = 48.dp
+
+@Composable
+private fun StripButton(
+    arrow: String,
+    @StringRes label: Int,
+    @StringRes description: Int,
+    enabled: Boolean,
+    onClick: () -> Unit,
+) {
+    val t = TlacuacheTheme.tokens
+    val color = if (enabled) t.colors.accent.color else t.colors.fgMuted.color
+    val text = stringResource(description)
+    Column(
+        Modifier
+            .width(StripWidth)
+            .background(t.colors.headerBg.color, MaterialTheme.shapes.small)
+            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+            .semantics { contentDescription = text }
+            .padding(vertical = 8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(arrow, color = color, style = MaterialTheme.typography.titleLarge)
+        Text(stringResource(label), color = color, style = MaterialTheme.typography.labelSmall)
     }
 }
 

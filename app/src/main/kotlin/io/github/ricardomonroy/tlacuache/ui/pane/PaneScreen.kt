@@ -100,6 +100,8 @@ fun PaneScreen(
     onAddFavorite: (File) -> Unit,
     onTransfer: (OpKind, List<File>) -> Unit,
     modifier: Modifier = Modifier,
+    /** Letra del otro panel cuando solo se ve uno: la barra de la selección dice «Copiar a B». */
+    otherPane: String? = null,
     switcher: (@Composable () -> Unit)? = null,
 ) {
     val tabs by pane.tabs.collectAsStateWithLifecycle()
@@ -127,6 +129,7 @@ fun PaneScreen(
                     activate,
                     onAddFavorite,
                     onTransfer,
+                    otherPane,
                 ),
                 tabStrip = { TabStrip(tabs, pane) },
                 tabMenu = { TabMenuButton(tabs, pane) },
@@ -147,6 +150,7 @@ private class Chrome(
     val onAddFavorite: (File) -> Unit,
     /** Copiar o mover al otro panel (A3.2; la franja central llega en A3.3). */
     val onTransfer: (OpKind, List<File>) -> Unit,
+    val otherPane: String?,
 )
 
 /** Contenido de una pestaña. Relee al volver a primer plano y vigila su carpeta (ARCHITECTURE §6). */
@@ -166,12 +170,8 @@ private fun TabScreen(
     val compactWidth = window.width < MEDIUM_WIDTH
     val ui by tab.ui.collectAsStateWithLifecycle()
     val t = TlacuacheTheme.tokens
-    // En primer plano se vigila la carpeta y se relee al volver (lo cambiado mientras tanto no generó
-    // eventos). La primera reanudación no relee: la pestaña ya leyó al crearse o sobrevivió a una rotación.
-    val resumed = remember { booleanArrayOf(false) }
+    // En primer plano se vigila la carpeta; al volver a vigilar, la pestaña relee si pudo perderse algo.
     LifecycleResumeEffect(tab) {
-        if (resumed[0]) tab.reload()
-        resumed[0] = true
         tab.startWatching()
         onPauseOrDispose { tab.stopWatching() }
     }
@@ -490,6 +490,10 @@ private fun TabScreen(
                 )
             }
             SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter))
+        }
+        // Con un solo panel no hay franja central: la barra inferior lleva la selección al otro (UI_SPEC §4).
+        if (ui.selecting && chrome.otherPane != null) {
+            SelectionActions(ui, chrome.otherPane) { act(ui.selection.first(), it) }
         }
         StatusBar(ui, showFreeSpace = !compactWidth)
     }

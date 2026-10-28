@@ -110,6 +110,10 @@
     <string name="conflict_skip">Omitir</string>
     <string name="conflict_keep_both">Conservar ambos</string>
     <string name="conflict_apply_all">Aplicar a todos</string>
+    <string name="strip_copy">Copiar</string>
+    <string name="strip_move">Mover</string>
+    <string name="copy_to_pane">Copiar a %1$s</string>
+    <string name="move_to_pane">Mover a %1$s</string>
     <string name="selection_close">Salir de la selección</string>
     <string name="selection_all">Todo</string>
     <plurals name="selection_count">
