@@ -102,4 +102,21 @@ class PaneStateTest {
         assertEquals(0, tabs.active)
         assertEquals(setOf(root), watching)
     }
+
+    @Test
+    fun moveKeepsActiveAndDetachSkipsLastTab() {
+        repeat(2) { pane.openTab() } // 3 pestañas, activa la última
+        val (a, b, c) = tabs.list
+        pane.move(2, 0)
+        assertEquals(listOf(c, a, b), tabs.list)
+        assertSame(c, tabs.current)
+        c.startWatching()
+        assertSame(c, pane.detach(0)) // sale sin dejar de vigilar: sigue viva en el otro panel
+        assertEquals(listOf(a, b), tabs.list)
+        assertEquals(setOf(root), watching)
+        pane.adopt(c)
+        assertSame(c, tabs.current)
+        pane.closeOthers(0)
+        assertEquals(null, pane.detach(0))
+    }
 }

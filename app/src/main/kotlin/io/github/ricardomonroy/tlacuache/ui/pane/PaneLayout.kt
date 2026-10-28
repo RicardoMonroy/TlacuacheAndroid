@@ -336,6 +336,7 @@ fun PaneLayout(window: WindowViewModel) {
                                     onRemove = remove,
                                     onRun = run,
                                     onDrop = drop,
+                                    side = SidePane(onRight = i == 0) { window.moveTabToOther(i, it) },
                                     modifier = Modifier.weight(if (i == 0) shownSplit else 1 - shownSplit),
                                 )
                             }

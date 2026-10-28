@@ -125,6 +125,8 @@ fun PaneScreen(
     /** Letra del otro panel cuando solo se ve uno: la barra de la selección dice «Copiar a B». */
     otherPane: String? = null,
     switcher: (@Composable () -> Unit)? = null,
+    /** El otro panel al lado (modo dual), adonde se arrastran pestañas (A4.7). */
+    side: SidePane? = null,
 ) {
     val tabs by pane.tabs.collectAsStateWithLifecycle()
     val activate by rememberUpdatedState(onActivate)
@@ -156,7 +158,7 @@ fun PaneScreen(
                     onDrop,
                     otherPane,
                 ),
-                tabStrip = { TabStrip(tabs, pane) },
+                tabStrip = { TabStrip(tabs, pane, side) },
                 tabMenu = { TabMenuButton(tabs, pane) },
                 paneKeys = { handleTabShortcut(it, pane) },
             )

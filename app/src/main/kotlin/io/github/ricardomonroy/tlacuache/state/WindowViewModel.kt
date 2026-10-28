@@ -91,6 +91,16 @@ class WindowViewModel(
     private val _activePane = MutableStateFlow(0)
     val activePane: StateFlow<Int> = _activePane.asStateFlow()
 
+    /** Pasa la pestaña [index] del panel [from] al otro y lo activa (A4.7); la última no se mueve. */
+    fun moveTabToOther(
+        from: Int,
+        index: Int,
+    ) {
+        val tab = panes.getOrNull(from)?.detach(index) ?: return
+        panes[1 - from].adopt(tab)
+        activate(1 - from)
+    }
+
     fun activate(pane: Int) {
         if (pane in panes.indices) _activePane.value = pane
     }

@@ -40,11 +40,17 @@ class PaneState(
 
     /** Ctrl+W o ✕: cierra la pestaña [index]; la última no se cierra. */
     fun closeTab(index: Int = _tabs.value.active) {
+        detach(index)?.stopWatching()
+    }
+
+    /** Quita la pestaña [index] sin cerrarla (pasa al otro panel, A4.7); la última no se quita. */
+    fun detach(index: Int): TabState? {
+        var out: TabState? = null
         _tabs.update { t ->
-            if (t.list.size == 1 || index !in t.list.indices) return
-            t.list[index].stopWatching()
+            if (t.list.size == 1 || index !in t.list.indices) return null
+            out = t.list[index]
             val list = t.list.toMutableList().apply { removeAt(index) }
-            // La activa sigue siendo la misma pestaña si queda; si se cerró, pasa a la de al lado.
+            // La activa sigue siendo la misma pestaña si queda; si se quitó, pasa a la de al lado.
             val active =
                 when {
                     index < t.active -> t.active - 1
@@ -52,6 +58,24 @@ class PaneState(
                     else -> t.active
                 }
             Tabs(list, active)
+        }
+        return out
+    }
+
+    /** Recibe una pestaña de otro panel, al final y activa. */
+    fun adopt(tab: TabState) {
+        _tabs.update { t -> Tabs(t.list + tab, t.list.size) }
+    }
+
+    /** Arrastrar una pestaña: la pasa de [from] a [to]; la activa sigue siendo la misma. */
+    fun move(
+        from: Int,
+        to: Int,
+    ) {
+        _tabs.update { t ->
+            if (from !in t.list.indices || to !in t.list.indices) return
+            val list = t.list.toMutableList().apply { add(to, removeAt(from)) }
+            Tabs(list, list.indexOf(t.current))
         }
     }
 
@@ -72,6 +96,8 @@ class PaneState(
         _tabs.value.list.forEach(TabState::stopWatching)
         _tabs.value = Tabs(list, active.coerceIn(list.indices))
     }
+
+    fun indexOf(tab: TabState): Int = _tabs.value.list.indexOf(tab)
 
     fun select(index: Int) {
         _tabs.update { t -> if (index in t.list.indices) t.copy(active = index) else t }
