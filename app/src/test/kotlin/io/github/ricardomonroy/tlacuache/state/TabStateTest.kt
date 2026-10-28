@@ -2,6 +2,7 @@ package io.github.ricardomonroy.tlacuache.state
 
 import io.github.ricardomonroy.tlacuache.ffi.FileEntry
 import io.github.ricardomonroy.tlacuache.ffi.FilterKey
+import io.github.ricardomonroy.tlacuache.ffi.SortKey
 import io.github.ricardomonroy.tlacuache.storage.FolderWatch
 import io.github.ricardomonroy.tlacuache.storage.FolderWatcher
 import kotlinx.coroutines.CoroutineScope
@@ -172,6 +173,25 @@ class TabStateTest {
         assertTrue(ui.selectionProtected)
         tab.open(dir("DCIM"))
         assertFalse(ui.isProtected("Camera"))
+    }
+
+    @Test
+    fun sortsByColumnAndClimbsWhenTheFolderDisappears() {
+        File(root, "b.txt").writeText("xx")
+        File(root, "a.txt").writeText("xxxx")
+        tab.reload()
+        awaitUi { !it.loading && names() == listOf("DCIM", "a.txt", "b.txt") }
+        tab.sortBy(SortKey.SIZE)
+        awaitUi { names() == listOf("DCIM", "b.txt", "a.txt") }
+        tab.sortBy(SortKey.SIZE)
+        awaitUi { names() == listOf("DCIM", "a.txt", "b.txt") }
+
+        val camera = File(root, "DCIM/Camera").apply { mkdirs() }
+        tab.goTo(camera)
+        camera.parentFile?.deleteRecursively()
+        tab.reload()
+        awaitUi { it.dir == root }
+        assertFalse(ui.failed)
     }
 
     @Test

@@ -54,6 +54,12 @@
     <string name="place_recordings">Grabaciones</string>
     <string name="path_not_a_folder">Esa carpeta no existe.</string>
     <string name="path_outside_storage">Esa ruta está fuera de tu almacenamiento.</string>
+    <string name="column_name">Nombre</string>
+    <string name="column_size">Tamaño</string>
+    <string name="column_modified">Modificado</string>
+    <string name="column_age">Edad</string>
+    <string name="sort_ascending">Orden ascendente</string>
+    <string name="sort_descending">Orden descendente</string>
     <string name="pane_empty">Aquí no hay nada… ni para el tlacuache.</string>
     <string name="pane_read_error">No se pudo leer esta carpeta.</string>
     <string name="pane_retry">Reintentar</string>
@@ -142,6 +148,18 @@
         <item quantity="other">Moviendo %d elementos</item>
     </plurals>
     <string name="ops_done_copy">Copia terminada</string>
+    <plurals name="ops_done_copy_to">
+        <item quantity="one">Se copió %1$d elemento a «%2$s»</item>
+        <item quantity="other">Se copiaron %1$d elementos a «%2$s»</item>
+    </plurals>
+    <plurals name="ops_done_move_to">
+        <item quantity="one">Se movió %1$d elemento a «%2$s»</item>
+        <item quantity="other">Se movieron %1$d elementos a «%2$s»</item>
+    </plurals>
+    <plurals name="ops_done_trash_count">
+        <item quantity="one">Se envió %d elemento a la papelera</item>
+        <item quantity="other">Se enviaron %d elementos a la papelera</item>
+    </plurals>
     <string name="ops_done_move">Movimiento terminado</string>
     <string name="ops_done_trash">Enviado a la papelera</string>
     <string name="ops_done_delete">Borrado permanentemente</string>
@@ -156,6 +174,7 @@
         <item quantity="one">%d elemento se borrará para siempre. No se puede deshacer.</item>
         <item quantity="other">%d elementos se borrarán para siempre. No se puede deshacer.</item>
     </plurals>
+    <string name="delete_confirm_size">En total: %s.</string>
     <string name="delete_confirm">Borrar</string>
     <string name="trash_title">Papelera</string>
     <string name="trash_close">Cerrar la papelera</string>
@@ -233,6 +252,8 @@
     <!-- Pestañas (A2.1) -->
     <string name="tab_new">Pestaña nueva</string>
     <string name="tab_close">Cerrar pestaña</string>
+    <string name="tab_duplicate">Duplicar</string>
+    <string name="tab_close_others">Cerrar las demás</string>
     <plurals name="tab_count">
         <item quantity="one">%d pestaña abierta</item>
         <item quantity="other">%d pestañas abiertas</item>

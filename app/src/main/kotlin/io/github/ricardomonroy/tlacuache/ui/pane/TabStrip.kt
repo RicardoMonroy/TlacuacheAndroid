@@ -2,7 +2,7 @@ package io.github.ricardomonroy.tlacuache.ui.pane
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -27,6 +27,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.isSecondaryPressed
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -38,6 +42,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.ricardomonroy.tlacuache.R
 import io.github.ricardomonroy.tlacuache.state.PaneState
 import io.github.ricardomonroy.tlacuache.state.TabState
+import io.github.ricardomonroy.tlacuache.ui.Shortcut
+import io.github.ricardomonroy.tlacuache.ui.WithTooltip
 import io.github.ricardomonroy.tlacuache.ui.theme.TlacuacheTheme
 import io.github.ricardomonroy.tlacuache.ui.theme.color
 
@@ -45,9 +51,10 @@ private val TabWidth = 160.dp
 
 /**
  * Tira de pestañas del panel (UI_SPEC §2): ancho fijo, título a la izquierda, desplazable; tocar
- * selecciona, ✕ cierra (salvo la última), + abre una nueva en la carpeta actual.
+ * selecciona, ✕ cierra (salvo la última), + abre una nueva en la carpeta actual. Pulsación larga o clic
+ * derecho: Duplicar y Cerrar las demás.
  *
- * shortcut: arrastrar pestañas y su menú (Duplicar, Cerrar las demás), después.
+ * shortcut: arrastrar pestañas para reordenarlas y el clic central para cerrar, después (ROADMAP A4.6).
  */
 @Composable
 fun TabStrip(
@@ -65,14 +72,18 @@ fun TabStrip(
                     active = index == tabs.active,
                     closable = tabs.list.size > 1,
                     onSelect = { pane.select(index) },
+                    onDuplicate = { pane.openTab(from = index) },
+                    onCloseOthers = { pane.closeOthers(index) },
                 ) {
                     pane.closeTab(index)
                 }
             }
         }
         val newTab = stringResource(R.string.tab_new)
-        IconButton(pane::openTab, Modifier.semantics { contentDescription = newTab }) {
-            Text("+", color = t.colors.headerFg.color, style = MaterialTheme.typography.titleLarge)
+        WithTooltip(newTab, Shortcut.NEW_TAB) {
+            IconButton(pane::openTab, Modifier.semantics { contentDescription = newTab }) {
+                Text("+", color = t.colors.headerFg.color, style = MaterialTheme.typography.titleLarge)
+            }
         }
     }
 }
@@ -145,19 +156,51 @@ private fun TabButton(
     active: Boolean,
     closable: Boolean,
     onSelect: () -> Unit,
+    onDuplicate: () -> Unit,
+    onCloseOthers: () -> Unit,
     onClose: () -> Unit,
 ) {
     val t = TlacuacheTheme.tokens
     val ui by tab.ui.collectAsStateWithLifecycle()
     val title = ui.volumeName ?: ui.dir.name
+    var menu by remember { mutableStateOf(false) }
     Box(
         Modifier
             .width(TabWidth)
             .height(40.dp)
             .background(if (active) t.colors.paneBg.color else t.colors.headerBg.color, MaterialTheme.shapes.small)
             .semantics { selected = active }
-            .clickable(onClick = onSelect),
+            .pointerInput(Unit) {
+                // Clic derecho: el menú de la pestaña.
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) {
+                            event.changes.forEach { it.consume() }
+                            menu = true
+                        }
+                    }
+                }
+            }.combinedClickable(onClick = onSelect, onLongClick = { menu = true }),
     ) {
+        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.tab_duplicate)) },
+                onClick = {
+                    menu = false
+                    onDuplicate()
+                },
+            )
+            if (closable) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(R.string.tab_close_others)) },
+                    onClick = {
+                        menu = false
+                        onCloseOthers()
+                    },
+                )
+            }
+        }
         Row(Modifier.padding(start = 12.dp).height(40.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 title,

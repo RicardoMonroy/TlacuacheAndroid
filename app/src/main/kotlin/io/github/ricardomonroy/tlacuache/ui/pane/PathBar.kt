@@ -4,11 +4,13 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -88,22 +90,45 @@ private fun Breadcrumb(
     val scroll = rememberScrollState()
     // Siempre se ve el final de la ruta, la carpeta actual, también al cambiar el ancho del panel.
     LaunchedEffect(ui.crumbs, scroll.maxValue) { scroll.scrollTo(scroll.maxValue) }
-    Box(modifier.heightIn(min = 48.dp).clickable(onClick = onEmptyTap), contentAlignment = Alignment.CenterStart) {
-        Row(Modifier.horizontalScroll(scroll), verticalAlignment = Alignment.CenterVertically) {
-            ui.crumbs.forEachIndexed { i, crumb ->
-                if (i > 0) Text("›", color = t.colors.fgMuted.color)
-                val label = ui.rootLabel?.takeIf { i == 0 } ?: crumb.name
-                val current = i == ui.crumbs.lastIndex
-                TextButton(onClick = { onCrumb(crumb) }, enabled = !current) {
-                    Text(
-                        label,
-                        color = if (current) t.colors.headerFg.color else t.colors.fgMuted.color,
-                        style = with(MaterialTheme.typography) { if (current) titleMedium else bodyLarge },
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+
+    @Composable
+    fun Crumb(i: Int) {
+        val crumb = ui.crumbs[i]
+        val label = ui.rootLabel?.takeIf { i == 0 } ?: crumb.name
+        if (i == ui.crumbs.lastIndex) {
+            // La actual no se toca: texto sin el relleno del botón, que en un panel estrecho no cabe.
+            Text(
+                label,
+                color = t.colors.headerFg.color,
+                style = MaterialTheme.typography.titleMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(horizontal = 4.dp),
+            )
+        } else {
+            TextButton(onClick = { onCrumb(crumb) }) {
+                Text(label, color = t.colors.fgMuted.color, style = MaterialTheme.typography.bodyLarge, maxLines = 1)
+            }
+        }
+    }
+    BoxWithConstraints(
+        modifier.heightIn(min = 48.dp).clickable(onClick = onEmptyTap),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        // La carpeta actual se mide primero y, si no cabe ni sola, se acorta con «…»; los padres se
+        // desplazan en lo que sobra. Dentro del desplazamiento el panel estrecho cortaba su inicio.
+        val limit = maxWidth
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                Modifier.weight(1f, fill = false).horizontalScroll(scroll),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                for (i in 0 until ui.crumbs.lastIndex) {
+                    Crumb(i)
+                    Text("›", color = t.colors.fgMuted.color)
                 }
             }
+            Box(Modifier.widthIn(max = limit)) { Crumb(ui.crumbs.lastIndex) }
         }
     }
 }

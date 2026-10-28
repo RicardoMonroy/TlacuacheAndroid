@@ -21,11 +21,19 @@ class PaneState(
     private val _tabs = MutableStateFlow(Tabs(listOf(newTab(startDir)), 0))
     val tabs: StateFlow<Tabs> = _tabs.asStateFlow()
 
-    /** Ctrl+T: pestaña nueva en la carpeta actual, justo después de la activa (como en Linux). */
-    fun openTab() {
+    /**
+     * Ctrl+T: pestaña nueva en la carpeta actual, justo después de la activa (como en Linux). Con [from],
+     * Duplicar esa pestaña del menú.
+     */
+    fun openTab(from: Int = _tabs.value.active) {
         _tabs.update { t ->
-            val tab = newTab(t.current.ui.value.dir)
-            val at = t.active + 1
+            if (from !in t.list.indices) return
+            val tab =
+                newTab(
+                    t.list[from]
+                        .ui.value.dir,
+                )
+            val at = from + 1
             Tabs(t.list.toMutableList().apply { add(at, tab) }, at)
         }
     }
@@ -44,6 +52,15 @@ class PaneState(
                     else -> t.active
                 }
             Tabs(list, active)
+        }
+    }
+
+    /** Cerrar las demás: deja solo la pestaña [index]. */
+    fun closeOthers(index: Int) {
+        _tabs.update { t ->
+            val keep = t.list.getOrNull(index) ?: return
+            t.list.filter { it !== keep }.forEach(TabState::stopWatching)
+            Tabs(listOf(keep), 0)
         }
     }
 

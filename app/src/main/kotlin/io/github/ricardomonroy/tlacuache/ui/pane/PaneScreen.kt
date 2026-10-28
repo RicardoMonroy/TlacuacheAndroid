@@ -356,7 +356,7 @@ private fun TabScreen(
         naming = Naming(if (directory) OpKind.MKDIR else OpKind.CREATE_FILE, name, directory)
     }
     confirmDelete?.let { targets ->
-        DeleteConfirmation(targets.size, onDismiss = { confirmDelete = null }) {
+        DeleteConfirmation(targets, onDismiss = { confirmDelete = null }) {
             chrome.onRemove(OpKind.DELETE, targets)
             tab.clearSelection()
             confirmDelete = null
@@ -594,8 +594,10 @@ private fun TabScreen(
                     tabMenu()
                 }
                 val filterLabel = stringResource(R.string.filter_open)
-                IconButton({ filterOpen = true }, Modifier.semantics { contentDescription = filterLabel }) {
-                    SearchGlyph(t.colors.headerFg.color)
+                WithTooltip(filterLabel, null) {
+                    IconButton({ filterOpen = true }, Modifier.semantics { contentDescription = filterLabel }) {
+                        SearchGlyph(t.colors.headerFg.color)
+                    }
                 }
                 Box {
                     NavButton("⋮", R.string.menu_more, enabled = true) { moreMenu = true }
@@ -704,6 +706,8 @@ private fun TabScreen(
                                 gestures = gestures,
                                 drag = drag,
                                 onAction = act,
+                                sort = ui.sort,
+                                onSort = tab::sortBy,
                                 modifier = Modifier.fillMaxSize(),
                             )
                         }

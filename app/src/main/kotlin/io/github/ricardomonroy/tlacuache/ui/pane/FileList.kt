@@ -3,6 +3,7 @@ package io.github.ricardomonroy.tlacuache.ui.pane
 import android.text.format.Formatter
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -10,6 +11,7 @@ import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -33,10 +35,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -48,6 +54,8 @@ import io.github.ricardomonroy.tlacuache.ffi.AgeBucket
 import io.github.ricardomonroy.tlacuache.ffi.AgeStyle
 import io.github.ricardomonroy.tlacuache.ffi.AgeUnit
 import io.github.ricardomonroy.tlacuache.ffi.FileEntry
+import io.github.ricardomonroy.tlacuache.ffi.SortKey
+import io.github.ricardomonroy.tlacuache.ffi.SortSpec
 import io.github.ricardomonroy.tlacuache.ffi.age
 import io.github.ricardomonroy.tlacuache.ops.Clipboard
 import io.github.ricardomonroy.tlacuache.ui.rowHeight
@@ -99,26 +107,58 @@ fun FileList(
     gestures: ItemGestures,
     drag: ItemDrag,
     onAction: (FileEntry, FileAction) -> Unit,
+    sort: SortSpec,
+    onSort: (SortKey) -> Unit,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(),
 ) {
     BoxWithConstraints(modifier) {
         val columns = Columns.forWidth(maxWidth)
-        LazyColumn(Modifier.fillMaxSize().then(gestures.trackPointer), rememberLazyListState(), contentPadding) {
-            // El nombre es la identidad: releer la carpeta conserva desplazamiento y selección (ADR-A10).
-            itemsIndexed(entries, key = { _, e -> e.name }) { index, entry ->
-                FileRow(
-                    entry,
-                    nowMs,
-                    columns,
-                    alt = index % 2 == 1,
-                    selection = selectionColors(entry.name in selected, activePane),
-                    gestures = gestures,
-                    drag = drag,
-                    protected = isProtected(entry.name),
-                    onAction = { onAction(entry, it) },
-                )
-            }
+        Column(Modifier.fillMaxSize()) {
+            SortHeader(columns, sort, onSort)
+            FileRows(
+                entries,
+                nowMs,
+                columns,
+                selected,
+                activePane,
+                isProtected,
+                gestures,
+                drag,
+                onAction,
+                contentPadding,
+            )
+        }
+    }
+}
+
+@Composable
+private fun FileRows(
+    entries: List<FileEntry>,
+    nowMs: Long,
+    columns: Columns,
+    selected: Set<String>,
+    activePane: Boolean,
+    isProtected: (String) -> Boolean,
+    gestures: ItemGestures,
+    drag: ItemDrag,
+    onAction: (FileEntry, FileAction) -> Unit,
+    contentPadding: PaddingValues,
+) {
+    LazyColumn(Modifier.fillMaxSize().then(gestures.trackPointer), rememberLazyListState(), contentPadding) {
+        // El nombre es la identidad: releer la carpeta conserva desplazamiento y selección (ADR-A10).
+        itemsIndexed(entries, key = { _, e -> e.name }) { index, entry ->
+            FileRow(
+                entry,
+                nowMs,
+                columns,
+                alt = index % 2 == 1,
+                selection = selectionColors(entry.name in selected, activePane),
+                gestures = gestures,
+                drag = drag,
+                protected = isProtected(entry.name),
+                onAction = { onAction(entry, it) },
+            )
         }
     }
 }
@@ -201,6 +241,77 @@ internal fun FileMenu(
                 )
             }
     }
+}
+
+/** Encabezados de columna (UI_SPEC §3): tocar uno ordena por él; otra vez invierte el sentido. */
+@Composable
+private fun SortHeader(
+    columns: Columns,
+    sort: SortSpec,
+    onSort: (SortKey) -> Unit,
+) {
+    val t = TlacuacheTheme.tokens
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .background(t.colors.paneBg.color)
+            .padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        // El ícono de 20dp de las filas: el nombre queda alineado con su columna.
+        HeaderCell(R.string.column_name, SortKey.NAME, sort, onSort, Modifier.weight(1f).padding(start = 32.dp))
+        if (columns.size) {
+            HeaderCell(R.string.column_size, SortKey.SIZE, sort, onSort, Modifier.width(72.dp), TextAlign.End)
+        }
+        if (columns.date) HeaderCell(R.string.column_modified, SortKey.MODIFIED, sort, onSort, Modifier.width(132.dp))
+        // La edad es la fecha vista de otro modo: ordena por fecha, y marca el sentido si no hay columna de fecha.
+        if (columns.age) {
+            HeaderCell(
+                R.string.column_age,
+                SortKey.MODIFIED,
+                sort.takeIf { !columns.date },
+                onSort,
+                Modifier.width(56.dp),
+                TextAlign.End,
+            )
+        }
+    }
+}
+
+@Composable
+private fun HeaderCell(
+    @StringRes label: Int,
+    key: SortKey,
+    sort: SortSpec?,
+    onSort: (SortKey) -> Unit,
+    modifier: Modifier,
+    align: TextAlign = TextAlign.Start,
+) {
+    val t = TlacuacheTheme.tokens
+    val active = sort?.key == key
+    val arrow =
+        when {
+            !active -> ""
+            sort.descending -> " ▼"
+            else -> " ▲"
+        }
+    val state =
+        if (active) stringResource(if (sort.descending) R.string.sort_descending else R.string.sort_ascending) else ""
+    Text(
+        stringResource(label) + arrow,
+        color = if (active) t.colors.fg.color else t.colors.fgMuted.color,
+        style = MaterialTheme.typography.labelLarge,
+        textAlign = align,
+        maxLines = 1,
+        overflow = TextOverflow.Ellipsis,
+        modifier =
+            modifier
+                .clickable(role = Role.Button) { onSort(key) }
+                .semantics { stateDescription = state }
+                .pointerHoverIcon(PointerIcon.Hand)
+                .padding(vertical = 8.dp),
+    )
 }
 
 @Composable

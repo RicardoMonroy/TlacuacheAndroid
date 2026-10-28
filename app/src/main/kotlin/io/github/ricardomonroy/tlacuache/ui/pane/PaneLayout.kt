@@ -205,7 +205,7 @@ fun PaneLayout(window: WindowViewModel) {
         OpsRepository.finished.collect { op ->
             val result =
                 snackbar.showSnackbar(
-                    resources.getString(finishedMessage(op)),
+                    finishedMessage(resources, op, window::volumeName),
                     actionLabel = if (op.canUndo) resources.getString(R.string.ops_undo) else null,
                     duration = SnackbarDuration.Short,
                 )
@@ -347,6 +347,7 @@ fun PaneLayout(window: WindowViewModel) {
                         .padding(start = 16.dp, bottom = 40.dp),
             )
             OpsIndicator(
+                window::volumeName,
                 Modifier
                     .align(Alignment.BottomEnd)
                     .windowInsetsPadding(WindowInsets.navigationBars)
@@ -377,8 +378,11 @@ private fun sidebarItems(
 @Composable
 private fun DrawerButton(onClick: () -> Unit) {
     val t = TlacuacheTheme.tokens
-    IconButton(onClick) {
-        Icon(painterResource(R.drawable.ic_menu), stringResource(R.string.sidebar_open), tint = t.colors.headerFg.color)
+    val label = stringResource(R.string.sidebar_open)
+    WithTooltip(label, Shortcut.SIDEBAR) {
+        IconButton(onClick) {
+            Icon(painterResource(R.drawable.ic_menu), label, tint = t.colors.headerFg.color)
+        }
     }
 }
 

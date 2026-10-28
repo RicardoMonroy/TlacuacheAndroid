@@ -49,6 +49,8 @@ import io.github.ricardomonroy.tlacuache.ffi.usage
 import io.github.ricardomonroy.tlacuache.state.Place
 import io.github.ricardomonroy.tlacuache.storage.FavoritesStore
 import io.github.ricardomonroy.tlacuache.storage.Volume
+import io.github.ricardomonroy.tlacuache.ui.Shortcut
+import io.github.ricardomonroy.tlacuache.ui.WithTooltip
 import io.github.ricardomonroy.tlacuache.ui.pane.fileDropTarget
 import io.github.ricardomonroy.tlacuache.ui.theme.TlacuacheTheme
 import io.github.ricardomonroy.tlacuache.ui.theme.color
@@ -193,8 +195,10 @@ private fun MenuButton(
     onClick: () -> Unit,
 ) {
     val t = TlacuacheTheme.tokens
-    IconButton(onClick, Modifier.padding(4.dp)) {
-        Icon(painterResource(R.drawable.ic_menu), stringResource(label), tint = t.colors.sidebarFg.color)
+    WithTooltip(stringResource(label), Shortcut.SIDEBAR) {
+        IconButton(onClick, Modifier.padding(4.dp)) {
+            Icon(painterResource(R.drawable.ic_menu), stringResource(label), tint = t.colors.sidebarFg.color)
+        }
     }
 }
 

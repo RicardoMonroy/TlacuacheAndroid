@@ -51,7 +51,7 @@ class WindowViewModel(
             listOf(Volume(internalRoot, app.getString(R.string.volume_internal_short), Volume.Kind.INTERNAL, 0, 0)),
         )
 
-    private fun volumeName(dir: File): String? = volumes.value.firstOrNull { it.root == dir.absoluteFile }?.name
+    fun volumeName(dir: File): String? = volumes.value.firstOrNull { it.root == dir.absoluteFile }?.name
 
     private val startDir = startDir(savedState.get<String>(EXTRA_PATH))
 

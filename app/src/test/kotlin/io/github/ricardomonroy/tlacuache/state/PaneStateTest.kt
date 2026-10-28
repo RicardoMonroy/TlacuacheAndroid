@@ -85,4 +85,21 @@ class PaneStateTest {
         pane.cycle(-1)
         assertEquals(2, tabs.active)
     }
+
+    @Test
+    fun duplicateAndCloseOthers() {
+        tabs.current.open(FileEntry("DCIM", isDir = true, isHidden = false, size = 0u, modifiedMs = null))
+        pane.openTab()
+        tabs.list[1].up()
+        pane.openTab(from = 0) // Duplicar la primera: queda junto a ella, en su carpeta
+        assertEquals(listOf(File(root, "DCIM"), File(root, "DCIM"), root), dirs())
+        assertEquals(1, tabs.active)
+        val kept = tabs.list[2]
+        kept.startWatching()
+        tabs.list[0].startWatching()
+        pane.closeOthers(2)
+        assertEquals(listOf(kept), tabs.list)
+        assertEquals(0, tabs.active)
+        assertEquals(setOf(root), watching)
+    }
 }

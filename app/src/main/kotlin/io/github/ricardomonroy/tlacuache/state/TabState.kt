@@ -61,6 +61,8 @@ class TabState(
         val showHidden: Boolean = false,
         /** Vista de íconos (Ctrl+2) en vez de lista (Ctrl+1); se conserva al navegar. */
         val iconView: Boolean = false,
+        /** Orden de la lista (encabezados; carpetas siempre primero, `core::sort`); se conserva al navegar. */
+        val sort: SortSpec = SortSpec(SortKey.NAME, descending = false),
         /** Nombres de esta carpeta que no se mueven, renombran ni borran (ADR-A06): las estándar en la raíz. */
         val protectedNames: Set<String> = emptySet(),
         /** Dentro de `Android/`: nada se mueve, renombra ni borra. */
@@ -81,9 +83,6 @@ class TabState(
 
     /** Punto fijo de Shift+clic: el último elemento seleccionado con clic o toque. */
     private var anchor: String? = null
-
-    // shortcut: orden fijo hasta los encabezados de orden (A2).
-    private val sort = SortSpec(SortKey.NAME, descending = false)
 
     /** Todo lo leído de la carpeta, sin filtrar; filtro y ocultos se reaplican sin volver a leer el disco. */
     private var entries: List<FileEntry> = emptyList()
@@ -193,6 +192,15 @@ class TabState(
     /** Esc o el gesto atrás: sale del modo selección. */
     fun clearSelection() = _ui.update { it.copy(selected = emptySet()) }
 
+    /** Tocar un encabezado: ordena por esa columna; otra vez, invierte. Fecha empieza por lo más reciente. */
+    fun sortBy(key: SortKey) {
+        _ui.update { ui ->
+            val descending = if (ui.sort.key == key) !ui.sort.descending else key == SortKey.MODIFIED
+            ui.copy(sort = SortSpec(key, descending))
+        }
+        rearrange()
+    }
+
     fun setIconView(on: Boolean) = _ui.update { it.copy(iconView = on) }
 
     fun toggleHidden() {
@@ -255,6 +263,7 @@ class TabState(
             readOnly = volumeRootOf(dir)?.let { dir.absoluteFile.startsWith(File(it, "Android")) } ?: false,
             showHidden = prev.showHidden,
             iconView = prev.iconView,
+            sort = prev.sort,
         )
     }
 
@@ -275,12 +284,28 @@ class TabState(
                     }
                     _ui.update { it.copy(loading = false) }
                 } catch (_: IOException) {
-                    _ui.update { it.copy(visible = emptyList(), loading = false, failed = true) }
+                    // La carpeta desapareció (borrada, movida, SD retirada): a la más cercana que siga existiendo.
+                    val nearest = withContext(Dispatchers.IO) { nearestExisting(dir) }
+                    if (nearest != null) {
+                        navigate(nearest)
+                    } else {
+                        _ui.update { it.copy(visible = emptyList(), loading = false, failed = true) }
+                    }
                 } catch (_: SecurityException) {
                     _ui.update { it.copy(visible = emptyList(), loading = false, failed = true) }
                 }
             }
     }
+
+    /** Si [dir] ya no existe, la carpeta superior más cercana que sí, dentro de su volumen; `null` si existe. */
+    private fun nearestExisting(dir: File): File? =
+        if (dir.isDirectory) {
+            null
+        } else {
+            generateSequence(dir.parentFile) { it.parentFile }
+                .takeWhile { volumeRootOf(it) != null }
+                .firstOrNull(File::isDirectory)
+        }
 
     /** Reaplica filtro y ocultos a lo ya leído, fuera del hilo principal. */
     private fun rearrange() {
@@ -294,12 +319,12 @@ class TabState(
         val ui = _ui.value
         val visible =
             withContext(Dispatchers.Default) {
-                arrange(read, sort, ui.query, ui.showHidden).map { read[it.toInt()] }
+                arrange(read, ui.sort, ui.query, ui.showHidden).map { read[it.toInt()] }
             }
         // Descarta resultados viejos: llegó otra lectura o cambió el filtro mientras se ordenaba.
         val current = read === entries
         _ui.update { now ->
-            val sameFilter = now.query == ui.query && now.showHidden == ui.showHidden
+            val sameFilter = now.query == ui.query && now.showHidden == ui.showHidden && now.sort == ui.sort
             // Lo seleccionado que ya no está (borrado, renombrado o filtrado) deja de estarlo.
             val names = visible.mapTo(HashSet()) { it.name }
             if (current &&

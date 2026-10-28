@@ -23,6 +23,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -36,6 +37,7 @@ import io.github.ricardomonroy.tlacuache.ffi.Operation
 import io.github.ricardomonroy.tlacuache.ops.OpsRepository
 import io.github.ricardomonroy.tlacuache.ui.theme.TlacuacheTheme
 import io.github.ricardomonroy.tlacuache.ui.theme.color
+import java.io.File
 
 /**
  * Indicador de operaciones (UI_SPEC §5): un chip mientras hay algo en cola o en curso («Copiando 40 %» o
@@ -43,7 +45,10 @@ import io.github.ricardomonroy.tlacuache.ui.theme.color
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun OpsIndicator(modifier: Modifier = Modifier) {
+fun OpsIndicator(
+    volumeName: (File) -> String?,
+    modifier: Modifier = Modifier,
+) {
     val t = TlacuacheTheme.tokens
     val ops by OpsRepository.operations.collectAsStateWithLifecycle()
     var detail by remember { mutableStateOf(false) }
@@ -71,13 +76,16 @@ fun OpsIndicator(modifier: Modifier = Modifier) {
     }
     if (detail) {
         ModalBottomSheet(onDismissRequest = { detail = false }, containerColor = t.colors.paneBg.color) {
-            OpsDetail(ops)
+            OpsDetail(ops, volumeName)
         }
     }
 }
 
 @Composable
-private fun OpsDetail(ops: List<Operation>) {
+private fun OpsDetail(
+    ops: List<Operation>,
+    volumeName: (File) -> String?,
+) {
     val t = TlacuacheTheme.tokens
     val context = LocalContext.current
     Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 24.dp)) {
@@ -110,7 +118,7 @@ private fun OpsDetail(ops: List<Operation>) {
                                 overflow = TextOverflow.Ellipsis,
                             )
                             Text(
-                                op.status(),
+                                op.status(volumeName),
                                 color = (if (op.state is OpState.Failed) t.colors.error else t.colors.fgMuted).color,
                                 style = MaterialTheme.typography.bodySmall,
                                 maxLines = 1,
@@ -148,14 +156,14 @@ private fun Operation.percent(): String? =
         }?.let { "${(it * 100).toInt()} %" }
 
 @Composable
-private fun Operation.status(): String =
+private fun Operation.status(volumeName: (File) -> String?): String =
     when (state) {
         OpState.Queued -> stringResource(R.string.ops_queued)
         OpState.Running -> listOfNotNull(percent(), progress.current).joinToString(" · ")
         OpState.Cancelling -> stringResource(R.string.ops_cancelling)
-        OpState.Done -> stringResource(finishedMessage(this))
+        OpState.Done -> finishedMessage(LocalResources.current, this, volumeName)
         OpState.Cancelled -> stringResource(R.string.ops_cancelled)
-        is OpState.Failed -> stringResource(finishedMessage(this))
+        is OpState.Failed -> finishedMessage(LocalResources.current, this, volumeName)
     }
 
 private val OpKind.label: Int

@@ -1,5 +1,6 @@
 package io.github.ricardomonroy.tlacuache.ui.ops
 
+import android.content.res.Resources
 import android.text.format.Formatter
 import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
@@ -36,6 +37,7 @@ import io.github.ricardomonroy.tlacuache.ops.OpsRepository
 import io.github.ricardomonroy.tlacuache.ops.OpsRunner
 import io.github.ricardomonroy.tlacuache.ui.theme.TlacuacheTheme
 import io.github.ricardomonroy.tlacuache.ui.theme.color
+import java.io.File
 import java.text.DateFormat
 import java.util.Date
 
@@ -139,8 +141,26 @@ private fun Choice(
 }
 
 /** Aviso al terminar una operación. */
+fun finishedMessage(
+    resources: Resources,
+    op: Operation,
+    volumeName: (File) -> String?,
+): String {
+    val n = op.sources.size
+    // La raíz de un volumen se llama «Interno», no «0».
+    val dest = op.dest?.let(::File)?.let { volumeName(it) ?: it.name }
+    // Con cuántos y adónde (UI_SPEC §4): «Se copiaron 3 elementos a «Fotos»».
+    return when {
+        op.state != OpState.Done -> resources.getString(finishedMessageRes(op))
+        op.kind == OpKind.COPY && dest != null -> resources.getQuantityString(R.plurals.ops_done_copy_to, n, n, dest)
+        op.kind == OpKind.MOVE && dest != null -> resources.getQuantityString(R.plurals.ops_done_move_to, n, n, dest)
+        op.kind == OpKind.TRASH -> resources.getQuantityString(R.plurals.ops_done_trash_count, n, n)
+        else -> resources.getString(finishedMessageRes(op))
+    }
+}
+
 @StringRes
-fun finishedMessage(op: Operation): Int =
+private fun finishedMessageRes(op: Operation): Int =
     when (val state = op.state) {
         is OpState.Failed -> {
             when (runCatching { OpsRunner.Failure.valueOf(state.message) }.getOrNull()) {

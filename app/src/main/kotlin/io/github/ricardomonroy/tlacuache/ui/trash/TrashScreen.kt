@@ -124,13 +124,13 @@ fun TrashScreen(
         }
         if (confirmEmpty) {
             val all = items.orEmpty()
-            DeleteConfirmation(all.size, R.string.trash_empty_title, onDismiss = { confirmEmpty = false }) {
+            DeleteConfirmation(all.map { it.file }, R.string.trash_empty_title, onDismiss = { confirmEmpty = false }) {
                 run(OpKind.DELETE, all.map { it.file })
                 confirmEmpty = false
             }
         }
         confirmDelete?.let { item ->
-            DeleteConfirmation(1, onDismiss = { confirmDelete = null }) {
+            DeleteConfirmation(listOf(item.file), onDismiss = { confirmDelete = null }) {
                 run(OpKind.DELETE, listOf(item.file))
                 confirmDelete = null
             }
