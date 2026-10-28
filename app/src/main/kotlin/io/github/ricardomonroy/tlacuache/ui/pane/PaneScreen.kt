@@ -77,6 +77,7 @@ import io.github.ricardomonroy.tlacuache.ffi.OpKind
 import io.github.ricardomonroy.tlacuache.ffi.OpRequest
 import io.github.ricardomonroy.tlacuache.ffi.nextFreeName
 import io.github.ricardomonroy.tlacuache.intents.FileIntents
+import io.github.ricardomonroy.tlacuache.ops.Clipboard
 import io.github.ricardomonroy.tlacuache.state.BackStep
 import io.github.ricardomonroy.tlacuache.state.PaneState
 import io.github.ricardomonroy.tlacuache.state.PathInput
@@ -209,7 +210,8 @@ private fun TabScreen(
         val file = File(ui.dir, entry.name)
         val targets = (if (entry.name in ui.selected) ui.selection else listOf(entry)).map { File(ui.dir, it.name) }
         val removes =
-            action == FileAction.MOVE_TO_OTHER ||
+            action == FileAction.CUT ||
+                action == FileAction.MOVE_TO_OTHER ||
                 action == FileAction.RENAME ||
                 action == FileAction.TRASH ||
                 action == FileAction.DELETE
@@ -222,6 +224,12 @@ private fun TabScreen(
             when {
                 action == FileAction.COPY_TO_OTHER || action == FileAction.MOVE_TO_OTHER -> {
                     chrome.onTransfer(if (action == FileAction.COPY_TO_OTHER) OpKind.COPY else OpKind.MOVE, targets)
+                    tab.clearSelection()
+                    true
+                }
+
+                action == FileAction.COPY || action == FileAction.CUT -> {
+                    Clipboard.set(targets, cut = action == FileAction.CUT)
                     tab.clearSelection()
                     true
                 }
@@ -400,6 +408,12 @@ private fun TabScreen(
 
                     event.isCtrlPressed && event.isAltPressed && event.key == Key.N -> {
                         startNew(false)
+                        true
+                    }
+
+                    // Ctrl+C / Ctrl+X al portapapeles interno; Ctrl+V lo atiende la ventana (pega en el panel activo).
+                    event.isCtrlPressed && (event.key == Key.C || event.key == Key.X) && ui.selecting -> {
+                        currentAct(ui.selection.first(), if (event.key == Key.C) FileAction.COPY else FileAction.CUT)
                         true
                     }
 

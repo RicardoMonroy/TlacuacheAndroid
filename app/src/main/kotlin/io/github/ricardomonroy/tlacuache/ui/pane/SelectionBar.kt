@@ -50,7 +50,8 @@ fun SelectionBar(
             if (selection.size == 1) {
                 action.appliesTo(selection.single(), ui.selectionProtected)
             } else {
-                action == FileAction.COPY_TO_OTHER ||
+                action == FileAction.COPY ||
+                    action == FileAction.COPY_TO_OTHER ||
                     (!ui.selectionProtected && action in REMOVING) ||
                     (action == FileAction.SHARE && selection.any { !it.isDir })
             }
@@ -132,4 +133,4 @@ fun SelectionActions(
 }
 
 /** Acciones que quitan algo de su carpeta: no se ofrecen sobre carpetas protegidas (ADR-A06). */
-private val REMOVING = setOf(FileAction.MOVE_TO_OTHER, FileAction.TRASH, FileAction.DELETE)
+private val REMOVING = setOf(FileAction.CUT, FileAction.MOVE_TO_OTHER, FileAction.TRASH, FileAction.DELETE)

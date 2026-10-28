@@ -80,8 +80,10 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.ricardomonroy.tlacuache.R
 import io.github.ricardomonroy.tlacuache.ffi.OpKind
 import io.github.ricardomonroy.tlacuache.ffi.OpRequest
+import io.github.ricardomonroy.tlacuache.ops.Clipboard
 import io.github.ricardomonroy.tlacuache.ops.OpsRepository
 import io.github.ricardomonroy.tlacuache.state.WindowViewModel
+import io.github.ricardomonroy.tlacuache.ui.ops.ClipboardPill
 import io.github.ricardomonroy.tlacuache.ui.ops.OpsConflictDialog
 import io.github.ricardomonroy.tlacuache.ui.ops.OpsIndicator
 import io.github.ricardomonroy.tlacuache.ui.ops.finishedMessage
@@ -169,6 +171,8 @@ fun PaneLayout(window: WindowViewModel) {
     if (showTrash) TrashScreen(onClose = { showTrash = false }, run = remove)
     // Franja central y F5/F6: la selección del panel activo al otro (UI_SPEC §4).
     val activeTabs by window.panes[active].tabs.collectAsStateWithLifecycle()
+    // Pegar el portapapeles interno en la carpeta de la pestaña activa del panel activo.
+    val paste = { Clipboard.paste(activeTabs.current.ui.value.dir)?.let(run) }
     val activeUi by activeTabs.current.ui.collectAsStateWithLifecycle()
     val snackbar = remember { SnackbarHostState() }
     val protectedMessage = stringResource(R.string.ops_failed_protected)
@@ -225,6 +229,9 @@ fun PaneLayout(window: WindowViewModel) {
                     .onKeyEvent { event ->
                         if (event.type == KeyEventType.KeyDown && event.isCtrlPressed && event.key == Key.Z) {
                             OpsRepository.undoLast(context)
+                            true
+                        } else if (event.type == KeyEventType.KeyDown && event.isCtrlPressed && event.key == Key.V) {
+                            paste()
                             true
                         } else if (event.type == KeyEventType.KeyDown && event.key == Key.F9) {
                             if (permanentFits) window.toggleSidebar() else toggleDrawer()
@@ -296,6 +303,14 @@ fun PaneLayout(window: WindowViewModel) {
             }
         }
         SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).windowInsetsPadding(WindowInsets.navigationBars))
+        ClipboardPill(
+            onPaste = { paste() },
+            modifier =
+                Modifier
+                    .align(Alignment.BottomStart)
+                    .windowInsetsPadding(WindowInsets.navigationBars)
+                    .padding(start = 16.dp, bottom = 40.dp),
+        )
         OpsIndicator(
             Modifier
                 .align(Alignment.BottomEnd)

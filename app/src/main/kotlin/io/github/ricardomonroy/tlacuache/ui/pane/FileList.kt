@@ -60,6 +60,8 @@ enum class FileAction(
     ADD_FAVORITE(R.string.favorite_add),
 
     // shortcut: en el menú hasta la franja central y la barra con destino (A3.3).
+    COPY(R.string.action_copy),
+    CUT(R.string.action_cut),
     COPY_TO_OTHER(R.string.action_copy_to_other),
     MOVE_TO_OTHER(R.string.action_move_to_other),
     RENAME(R.string.action_rename),
@@ -137,10 +139,10 @@ internal fun FileAction.appliesTo(
     protected: Boolean,
 ): Boolean =
     when (this) {
-        FileAction.OPEN, FileAction.COPY_TO_OTHER -> true
+        FileAction.OPEN, FileAction.COPY, FileAction.COPY_TO_OTHER -> true
 
         // Carpetas protegidas (ADR-A06): no se mueven ni se borran, desde ningún camino.
-        FileAction.MOVE_TO_OTHER, FileAction.RENAME, FileAction.TRASH, FileAction.DELETE -> !protected
+        FileAction.CUT, FileAction.MOVE_TO_OTHER, FileAction.RENAME, FileAction.TRASH, FileAction.DELETE -> !protected
 
         FileAction.ADD_FAVORITE -> entry.isDir
 

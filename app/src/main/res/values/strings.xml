@@ -82,6 +82,18 @@
     </plurals>
     <string name="menu_more">Más opciones</string>
     <string name="menu_show_hidden">Mostrar ocultos</string>
+    <string name="action_copy">Copiar</string>
+    <string name="action_cut">Cortar</string>
+    <string name="paste">Pegar</string>
+    <string name="clip_clear">Vaciar el portapapeles</string>
+    <plurals name="clip_to_copy">
+        <item quantity="one">%d elemento para pegar</item>
+        <item quantity="other">%d elementos para pegar</item>
+    </plurals>
+    <plurals name="clip_to_move">
+        <item quantity="one">%d elemento para mover aquí</item>
+        <item quantity="other">%d elementos para mover aquí</item>
+    </plurals>
     <string name="action_copy_to_other">Copiar al otro panel</string>
     <string name="action_move_to_other">Mover al otro panel</string>
     <string name="ops_channel">Operaciones de archivos</string>
