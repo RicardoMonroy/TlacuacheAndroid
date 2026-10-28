@@ -1,6 +1,11 @@
 package io.github.ricardomonroy.tlacuache.ui.pane
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -51,6 +56,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalWindowInfo
@@ -61,9 +67,14 @@ import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.ricardomonroy.tlacuache.R
+import io.github.ricardomonroy.tlacuache.ffi.OpKind
+import io.github.ricardomonroy.tlacuache.ops.OpsRepository
 import io.github.ricardomonroy.tlacuache.state.WindowViewModel
+import io.github.ricardomonroy.tlacuache.ui.ops.OpsConflictDialog
+import io.github.ricardomonroy.tlacuache.ui.ops.finishedMessage
 import io.github.ricardomonroy.tlacuache.ui.sidebar.Sidebar
 import io.github.ricardomonroy.tlacuache.ui.sidebar.SidebarItems
 import io.github.ricardomonroy.tlacuache.ui.sidebar.SidebarRail
@@ -117,9 +128,25 @@ fun PaneLayout(window: WindowViewModel) {
     // Cada panel conserva sitio para botones y ruta; en un teléfono horizontal el divisor apenas se mueve.
     val minSplit = (with(LocalDensity.current) { MIN_PANE_WIDTH.toPx() } / rowWidth).coerceAtMost(0.5f)
     val shownSplit = split.coerceIn(minSplit, 1 - minSplit)
+    val context = LocalContext.current
+    // Las operaciones avisan por notificación (ADR-A09): se pide el permiso al encolar la primera.
+    val notifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
+    val transfer: (OpKind, File, Int) -> Unit = { kind, file, target ->
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
+            PackageManager.PERMISSION_GRANTED
+        ) {
+            notifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        window.transfer(kind, file, target)
+    }
+    OpsConflictDialog()
     val snackbar = remember { SnackbarHostState() }
     val resources = LocalResources.current
     LaunchedEffect(window) { window.notices.collect { snackbar.showSnackbar(resources.getString(it)) } }
+    LaunchedEffect(Unit) {
+        OpsRepository.finished.collect { snackbar.showSnackbar(resources.getString(finishedMessage(it))) }
+    }
     Box(Modifier.fillMaxSize()) {
         ModalNavigationDrawer(
             drawerContent = {
@@ -181,6 +208,7 @@ fun PaneLayout(window: WindowViewModel) {
                                 dual = true,
                                 onToggleDual = window::toggleDual,
                                 onAddFavorite = window::addFavorite,
+                                onTransfer = { kind, file -> transfer(kind, file, 1 - i) },
                                 modifier = Modifier.weight(if (i == 0) shownSplit else 1 - shownSplit),
                             )
                         }
@@ -197,6 +225,7 @@ fun PaneLayout(window: WindowViewModel) {
                             dual = if (wide) false else null,
                             onToggleDual = window::toggleDual,
                             onAddFavorite = window::addFavorite,
+                            onTransfer = { kind, file -> transfer(kind, file, 1 - active) },
                             modifier = Modifier.weight(1f),
                         )
                     }

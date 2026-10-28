@@ -82,6 +82,34 @@
     </plurals>
     <string name="menu_more">Más opciones</string>
     <string name="menu_show_hidden">Mostrar ocultos</string>
+    <string name="action_copy_to_other">Copiar al otro panel</string>
+    <string name="action_move_to_other">Mover al otro panel</string>
+    <string name="ops_channel">Operaciones de archivos</string>
+    <string name="ops_preparing">Preparando…</string>
+    <string name="ops_cancel">Cancelar</string>
+    <string name="ops_progress">%1$s de %2$s</string>
+    <plurals name="ops_copying">
+        <item quantity="one">Copiando %d elemento</item>
+        <item quantity="other">Copiando %d elementos</item>
+    </plurals>
+    <plurals name="ops_moving">
+        <item quantity="one">Moviendo %d elemento</item>
+        <item quantity="other">Moviendo %d elementos</item>
+    </plurals>
+    <string name="ops_done_copy">Copia terminada</string>
+    <string name="ops_done_move">Movimiento terminado</string>
+    <string name="ops_cancelled">Operación cancelada</string>
+    <string name="ops_failed_into_itself">No se puede copiar ni mover una carpeta dentro de sí misma.</string>
+    <string name="ops_failed_protected">Esta carpeta del sistema no se puede mover.</string>
+    <string name="ops_failed_read_only">En esta carpeta no se puede escribir.</string>
+    <string name="ops_failed_size">La copia no quedó completa; se descartó.</string>
+    <string name="ops_failed_io">No se pudo completar la operación (sin espacio, sin permiso o el volumen se retiró).</string>
+    <string name="conflict_title">«%1$s» ya existe</string>
+    <string name="conflict_replace">Reemplazar</string>
+    <string name="conflict_merge">Combinar</string>
+    <string name="conflict_skip">Omitir</string>
+    <string name="conflict_keep_both">Conservar ambos</string>
+    <string name="conflict_apply_all">Aplicar a todos</string>
     <string name="menu_icon_view">Vista de íconos</string>
     <string name="menu_dual_pane">Doble panel</string>
     <string name="pane_a">Panel A</string>

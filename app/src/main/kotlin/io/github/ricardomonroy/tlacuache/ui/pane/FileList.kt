@@ -55,6 +55,10 @@ enum class FileAction(
     OPEN_WITH(R.string.action_open_with),
     SHARE(R.string.action_share),
     ADD_FAVORITE(R.string.favorite_add),
+
+    // shortcut: en el menú hasta la franja central y la barra con destino (A3.3).
+    COPY_TO_OTHER(R.string.action_copy_to_other),
+    MOVE_TO_OTHER(R.string.action_move_to_other),
 }
 
 // shortcut: filas de 48 dp (táctil); la densidad según el puntero llega en A4.2.
@@ -126,11 +130,10 @@ internal fun FileMenu(
     DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
         FileAction.entries
             .filter {
-                if (entry.isDir) {
-                    it == FileAction.OPEN || it == FileAction.ADD_FAVORITE
-                } else {
-                    it !=
-                        FileAction.ADD_FAVORITE
+                when (it) {
+                    FileAction.OPEN, FileAction.COPY_TO_OTHER, FileAction.MOVE_TO_OTHER -> true
+                    FileAction.ADD_FAVORITE -> entry.isDir
+                    FileAction.OPEN_WITH, FileAction.SHARE -> !entry.isDir
                 }
             }.forEach { action ->
                 DropdownMenuItem(

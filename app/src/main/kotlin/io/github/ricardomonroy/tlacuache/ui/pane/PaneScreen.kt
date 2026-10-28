@@ -73,6 +73,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.ricardomonroy.tlacuache.R
 import io.github.ricardomonroy.tlacuache.ffi.FileEntry
 import io.github.ricardomonroy.tlacuache.ffi.FilterKey
+import io.github.ricardomonroy.tlacuache.ffi.OpKind
 import io.github.ricardomonroy.tlacuache.intents.FileIntents
 import io.github.ricardomonroy.tlacuache.state.BackStep
 import io.github.ricardomonroy.tlacuache.state.PaneState
@@ -97,6 +98,7 @@ fun PaneScreen(
     dual: Boolean?,
     onToggleDual: () -> Unit,
     onAddFavorite: (File) -> Unit,
+    onTransfer: (OpKind, File) -> Unit,
     modifier: Modifier = Modifier,
     switcher: (@Composable () -> Unit)? = null,
 ) {
@@ -116,7 +118,16 @@ fun PaneScreen(
             TabScreen(
                 tabs.current,
                 pathInput,
-                Chrome(active, accent = switcher == null, switcher, dual, onToggleDual, activate, onAddFavorite),
+                Chrome(
+                    active,
+                    accent = switcher == null,
+                    switcher,
+                    dual,
+                    onToggleDual,
+                    activate,
+                    onAddFavorite,
+                    onTransfer,
+                ),
                 tabStrip = { TabStrip(tabs, pane) },
                 tabMenu = { TabMenuButton(tabs, pane) },
                 paneKeys = { handleTabKey(it, pane) },
@@ -134,6 +145,8 @@ private class Chrome(
     val onToggleDual: () -> Unit,
     val onActivate: () -> Unit,
     val onAddFavorite: (File) -> Unit,
+    /** Copiar o mover al otro panel (A3.2; la franja central llega en A3.3). */
+    val onTransfer: (OpKind, File) -> Unit,
 )
 
 /** Contenido de una pestaña. Relee al volver a primer plano y vigila su carpeta (ARCHITECTURE §6). */
@@ -178,6 +191,11 @@ private fun TabScreen(
         val file = File(ui.dir, entry.name)
         val started =
             when {
+                action == FileAction.COPY_TO_OTHER || action == FileAction.MOVE_TO_OTHER -> {
+                    chrome.onTransfer(if (action == FileAction.COPY_TO_OTHER) OpKind.COPY else OpKind.MOVE, file)
+                    true
+                }
+
                 entry.isDir && action == FileAction.ADD_FAVORITE -> {
                     chrome.onAddFavorite(file)
                     true

@@ -84,10 +84,20 @@ object Volumes {
             Intent.ACTION_MEDIA_BAD_REMOVAL,
         )
 
+    private fun mounted(storage: StorageManager) =
+        storage.storageVolumes.filter {
+            it.state == Environment.MEDIA_MOUNTED || it.state == Environment.MEDIA_MOUNTED_READ_ONLY
+        }
+
+    /** Raíces de los volúmenes montados, sin uso de disco (carpetas protegidas, ADR-A06). */
+    fun roots(context: Context): List<File> {
+        val storage = context.getSystemService(StorageManager::class.java)
+        return mounted(storage).mapNotNull { rootOf(context, storage, it) }
+    }
+
     private fun read(context: Context): List<Volume> {
         val storage = context.getSystemService(StorageManager::class.java)
-        return storage.storageVolumes
-            .filter { it.state == Environment.MEDIA_MOUNTED || it.state == Environment.MEDIA_MOUNTED_READ_ONLY }
+        return mounted(storage)
             .mapNotNull { volume ->
                 val root = rootOf(context, storage, volume) ?: return@mapNotNull null
                 val space = space(context, root)

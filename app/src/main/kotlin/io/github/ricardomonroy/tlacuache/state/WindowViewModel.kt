@@ -8,9 +8,12 @@ import androidx.lifecycle.viewModelScope
 import io.github.ricardomonroy.tlacuache.R
 import io.github.ricardomonroy.tlacuache.ffi.FavoriteGroup
 import io.github.ricardomonroy.tlacuache.ffi.Favorites
+import io.github.ricardomonroy.tlacuache.ffi.OpKind
+import io.github.ricardomonroy.tlacuache.ffi.OpRequest
 import io.github.ricardomonroy.tlacuache.ffi.SessionPane
 import io.github.ricardomonroy.tlacuache.ffi.SessionState
 import io.github.ricardomonroy.tlacuache.ffi.SessionTab
+import io.github.ricardomonroy.tlacuache.ops.OpsRepository
 import io.github.ricardomonroy.tlacuache.storage.FavoritesStore
 import io.github.ricardomonroy.tlacuache.storage.SessionStore
 import io.github.ricardomonroy.tlacuache.storage.Volume
@@ -74,6 +77,18 @@ class WindowViewModel(
         panes[_activePane.value]
             .tabs.value.current
             .goTo(dir)
+    }
+
+    /** Copia o mueve [file] a la carpeta actual del panel [target] (A3.2; la cola es de todo el proceso). */
+    fun transfer(
+        kind: OpKind,
+        file: File,
+        target: Int,
+    ) {
+        val dest =
+            panes[target]
+                .tabs.value.current.ui.value.dir
+        OpsRepository.enqueue(getApplication(), OpRequest(kind, listOf(file.path), dest.path, emptyList()))
     }
 
     /** Lugares de la barra lateral: carpetas estándar del almacenamiento interno (se buscan en IO). */
