@@ -49,12 +49,10 @@ fun SelectionBar(
     val actions =
         FileAction.entries.filter { action ->
             if (selection.size == 1) {
-                action.appliesTo(selection.single())
+                action.appliesTo(selection.single(), ui.selectionProtected)
             } else {
                 action == FileAction.COPY_TO_OTHER ||
-                    action == FileAction.MOVE_TO_OTHER ||
-                    action == FileAction.TRASH ||
-                    action == FileAction.DELETE ||
+                    (!ui.selectionProtected && action in REMOVING) ||
                     (action == FileAction.SHARE && selection.any { !it.isDir })
             }
         }
@@ -117,10 +115,19 @@ fun SelectionActions(
         horizontalArrangement = Arrangement.SpaceEvenly,
     ) {
         TextButton({ onAction(FileAction.COPY_TO_OTHER) }) { Text(stringResource(R.string.copy_to_pane, otherPane)) }
-        TextButton({ onAction(FileAction.MOVE_TO_OTHER) }) { Text(stringResource(R.string.move_to_pane, otherPane)) }
+        if (!ui.selectionProtected) {
+            TextButton(
+                { onAction(FileAction.MOVE_TO_OTHER) },
+            ) { Text(stringResource(R.string.move_to_pane, otherPane)) }
+        }
         if (ui.selection.any { !it.isDir }) {
             TextButton({ onAction(FileAction.SHARE) }) { Text(stringResource(R.string.action_share)) }
         }
-        TextButton({ onAction(FileAction.TRASH) }) { Text(stringResource(R.string.trash_title)) }
+        if (!ui.selectionProtected) {
+            TextButton({ onAction(FileAction.TRASH) }) { Text(stringResource(R.string.trash_title)) }
+        }
     }
 }
+
+/** Acciones que quitan algo de su carpeta: no se ofrecen sobre carpetas protegidas (ADR-A06). */
+private val REMOVING = setOf(FileAction.MOVE_TO_OTHER, FileAction.TRASH, FileAction.DELETE)

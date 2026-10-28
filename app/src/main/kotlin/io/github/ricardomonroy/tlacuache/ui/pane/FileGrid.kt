@@ -47,6 +47,7 @@ fun FileGrid(
     entries: List<FileEntry>,
     selected: Set<String>,
     activePane: Boolean,
+    isProtected: (String) -> Boolean,
     gestures: ItemGestures,
     onAction: (FileEntry, FileAction) -> Unit,
     modifier: Modifier = Modifier,
@@ -59,7 +60,9 @@ fun FileGrid(
     ) {
         // El nombre es la identidad, como en la lista (ADR-A10).
         items(entries, key = { it.name }) { entry ->
-            Cell(dir, entry, selectionColors(entry.name in selected, activePane), gestures) { onAction(entry, it) }
+            Cell(dir, entry, selectionColors(entry.name in selected, activePane), gestures, isProtected(entry.name)) {
+                onAction(entry, it)
+            }
         }
     }
 }
@@ -70,6 +73,7 @@ private fun Cell(
     entry: FileEntry,
     selection: SelectionColors?,
     gestures: ItemGestures,
+    protected: Boolean,
     onAction: (FileAction) -> Unit,
 ) {
     val t = TlacuacheTheme.tokens
@@ -106,6 +110,6 @@ private fun Cell(
                 modifier = Modifier.fillMaxWidth(),
             )
         }
-        FileMenu(entry, menu, { menu = false }, onAction)
+        FileMenu(entry, protected, menu, { menu = false }, onAction)
     }
 }

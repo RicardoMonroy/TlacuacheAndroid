@@ -121,7 +121,7 @@
     <string name="trash_from">De %1$s · %2$s</string>
     <string name="ops_cancelled">Operación cancelada</string>
     <string name="ops_failed_into_itself">No se puede copiar ni mover una carpeta dentro de sí misma.</string>
-    <string name="ops_failed_protected">Esta carpeta del sistema no se puede mover.</string>
+    <string name="ops_failed_protected">Las carpetas del sistema no se pueden mover, renombrar ni borrar.</string>
     <string name="ops_failed_read_only">En esta carpeta no se puede escribir.</string>
     <string name="ops_failed_size">La copia no quedó completa; se descartó.</string>
     <string name="ops_failed_io">No se pudo completar la operación (sin espacio, sin permiso o el volumen se retiró).</string>

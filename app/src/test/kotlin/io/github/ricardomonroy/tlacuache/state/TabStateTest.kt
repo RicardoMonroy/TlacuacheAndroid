@@ -165,6 +165,16 @@ class TabStateTest {
     }
 
     @Test
+    fun standardFoldersAreProtectedOnlyAtTheVolumeRoot() {
+        assertTrue(ui.isProtected("DCIM"))
+        assertFalse(ui.isProtected("notas"))
+        tab.toggle("DCIM")
+        assertTrue(ui.selectionProtected)
+        tab.open(dir("DCIM"))
+        assertFalse(ui.isProtected("Camera"))
+    }
+
+    @Test
     fun navigatingClearsFilterButKeepsHidden() {
         tab.toggleHidden()
         tab.setQuery("dc")

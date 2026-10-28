@@ -164,13 +164,19 @@ fun PaneLayout(window: WindowViewModel) {
     // Franja central y F5/F6: la selección del panel activo al otro (UI_SPEC §4).
     val activeTabs by window.panes[active].tabs.collectAsStateWithLifecycle()
     val activeUi by activeTabs.current.ui.collectAsStateWithLifecycle()
-    val transferSelection: (OpKind) -> Unit = { kind ->
+    val snackbar = remember { SnackbarHostState() }
+    val protectedMessage = stringResource(R.string.ops_failed_protected)
+    val transferSelection: (OpKind) -> Unit = transfer@{ kind ->
         val ui = activeTabs.current.ui.value
+        // F6 sobre una carpeta protegida: aviso, sin encolar (ADR-A06).
+        if (kind == OpKind.MOVE && ui.selectionProtected) {
+            scope.launch { snackbar.showSnackbar(protectedMessage) }
+            return@transfer
+        }
         transfer(kind, ui.selection.map { File(ui.dir, it.name) }, 1 - active)
         activeTabs.current.clearSelection()
     }
     OpsConflictDialog()
-    val snackbar = remember { SnackbarHostState() }
     val resources = LocalResources.current
     LaunchedEffect(window) { window.notices.collect { snackbar.showSnackbar(resources.getString(it)) } }
     LaunchedEffect(Unit) {
@@ -239,6 +245,7 @@ fun PaneLayout(window: WindowViewModel) {
                                 PaneStrip(
                                     fromA = active == 0,
                                     enabled = activeUi.selecting,
+                                    moveEnabled = activeUi.selecting && !activeUi.selectionProtected,
                                     onTransfer = transferSelection,
                                 ) { window.moveSplit(it / rowWidth, minSplit) }
                             }
@@ -333,6 +340,7 @@ private fun handleWindowKey(
 private fun PaneStrip(
     fromA: Boolean,
     enabled: Boolean,
+    moveEnabled: Boolean,
     onTransfer: (OpKind) -> Unit,
     onDrag: (Float) -> Unit,
 ) {
@@ -350,7 +358,12 @@ private fun PaneStrip(
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             val arrow = if (fromA) "→" else "←"
             StripButton(arrow, R.string.strip_copy, R.string.action_copy_to_other, enabled) { onTransfer(OpKind.COPY) }
-            StripButton(arrow, R.string.strip_move, R.string.action_move_to_other, enabled) { onTransfer(OpKind.MOVE) }
+            StripButton(
+                arrow,
+                R.string.strip_move,
+                R.string.action_move_to_other,
+                moveEnabled,
+            ) { onTransfer(OpKind.MOVE) }
         }
     }
 }

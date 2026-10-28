@@ -10,6 +10,7 @@ import io.github.ricardomonroy.tlacuache.ffi.arrange
 import io.github.ricardomonroy.tlacuache.storage.FolderWatch
 import io.github.ricardomonroy.tlacuache.storage.FolderWatcher
 import io.github.ricardomonroy.tlacuache.storage.Listing
+import io.github.ricardomonroy.tlacuache.storage.Protected
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -60,10 +61,19 @@ class TabState(
         val showHidden: Boolean = false,
         /** Vista de íconos (Ctrl+2) en vez de lista (Ctrl+1); se conserva al navegar. */
         val iconView: Boolean = false,
+        /** Nombres de esta carpeta que no se mueven, renombran ni borran (ADR-A06): las estándar en la raíz. */
+        val protectedNames: Set<String> = emptySet(),
+        /** Dentro de `Android/`: nada se mueve, renombra ni borra. */
+        val readOnly: Boolean = false,
         /** Nombres seleccionados (UI_SPEC §3); sobreviven a relecturas y se limpian al cambiar de carpeta. */
         val selected: Set<String> = emptySet(),
     ) {
         val selecting: Boolean get() = selected.isNotEmpty()
+
+        fun isProtected(name: String) = readOnly || name in protectedNames
+
+        /** Algo de lo seleccionado está protegido: mover, renombrar y borrar no se ofrecen. */
+        val selectionProtected: Boolean get() = selected.any(::isProtected)
 
         /** Entradas seleccionadas, en el orden visible. */
         val selection: List<FileEntry> get() = visible.filter { it.name in selected }
@@ -241,6 +251,8 @@ class TabState(
             canGoUp = name == null && dir.parentFile != null,
             crumbs = crumbsOf(dir),
             rootLabel = volumeRootOf(dir)?.let(volumeName),
+            protectedNames = if (name != null) Protected.STANDARD else emptySet(),
+            readOnly = volumeRootOf(dir)?.let { dir.absoluteFile.startsWith(File(it, "Android")) } ?: false,
             showHidden = prev.showHidden,
             iconView = prev.iconView,
         )

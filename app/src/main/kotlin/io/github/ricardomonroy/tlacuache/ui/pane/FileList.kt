@@ -86,6 +86,7 @@ fun FileList(
     nowMs: Long,
     selected: Set<String>,
     activePane: Boolean,
+    isProtected: (String) -> Boolean,
     gestures: ItemGestures,
     onAction: (FileEntry, FileAction) -> Unit,
     modifier: Modifier = Modifier,
@@ -103,6 +104,7 @@ fun FileList(
                     alt = index % 2 == 1,
                     selection = selectionColors(entry.name in selected, activePane),
                     gestures = gestures,
+                    protected = isProtected(entry.name),
                     onAction = { onAction(entry, it) },
                 )
             }
@@ -118,20 +120,29 @@ private fun FileRow(
     alt: Boolean,
     selection: SelectionColors?,
     gestures: ItemGestures,
+    protected: Boolean,
     onAction: (FileAction) -> Unit,
 ) {
     var menu by remember { mutableStateOf(false) }
     Box {
         RowContent(entry, nowMs, columns, alt, selection, Modifier.itemGestures(gestures, entry) { menu = true })
-        FileMenu(entry, menu, { menu = false }, onAction)
+        FileMenu(entry, protected, menu, { menu = false }, onAction)
     }
 }
 
 /** Acciones que tienen sentido para [entry] (carpeta o archivo). */
-internal fun FileAction.appliesTo(entry: FileEntry): Boolean =
+internal fun FileAction.appliesTo(
+    entry: FileEntry,
+    protected: Boolean,
+): Boolean =
     when (this) {
-        FileAction.OPEN, FileAction.COPY_TO_OTHER, FileAction.MOVE_TO_OTHER, FileAction.TRASH, FileAction.DELETE -> true
+        FileAction.OPEN, FileAction.COPY_TO_OTHER -> true
+
+        // Carpetas protegidas (ADR-A06): no se mueven ni se borran, desde ningún camino.
+        FileAction.MOVE_TO_OTHER, FileAction.TRASH, FileAction.DELETE -> !protected
+
         FileAction.ADD_FAVORITE -> entry.isDir
+
         FileAction.OPEN_WITH, FileAction.SHARE -> !entry.isDir
     }
 
@@ -139,6 +150,7 @@ internal fun FileAction.appliesTo(entry: FileEntry): Boolean =
 @Composable
 internal fun FileMenu(
     entry: FileEntry,
+    protected: Boolean,
     expanded: Boolean,
     onDismiss: () -> Unit,
     onAction: (FileAction) -> Unit,
@@ -146,7 +158,7 @@ internal fun FileMenu(
     // shortcut: menú mínimo por pulsación larga hasta la selección (A3.4) y el menú contextual completo (A3.11).
     DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
         FileAction.entries
-            .filter { it.appliesTo(entry) }
+            .filter { it.appliesTo(entry, protected) }
             .forEach { action ->
                 DropdownMenuItem(
                     text = { Text(stringResource(action.label)) },

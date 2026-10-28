@@ -8,7 +8,8 @@ import java.io.File
  * gestiona (salvo `Android/`).
  */
 object Protected {
-    private val STANDARD =
+    /** Lo que no se mueve ni borra en la raíz de un volumen (también `Android/`, que ni se lista). */
+    val STANDARD =
         setOf(
             "DCIM",
             "Pictures",
@@ -22,6 +23,7 @@ object Protected {
             "Podcasts",
             "Audiobooks",
             "Recordings",
+            "Android",
             ".Tlacuache",
         )
 

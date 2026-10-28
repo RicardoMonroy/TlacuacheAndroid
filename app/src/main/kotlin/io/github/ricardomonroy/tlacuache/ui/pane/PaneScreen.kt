@@ -195,9 +195,16 @@ private fun TabScreen(
     val shareTitle = stringResource(R.string.action_share)
     // Carpetas: se entra. Archivos: se abren o comparten con otras apps (A1.6). Sobre un elemento seleccionado,
     // copiar, mover y compartir actúan sobre toda la selección.
-    val act: (FileEntry, FileAction) -> Unit = { entry, action ->
+    val protectedMessage = stringResource(R.string.ops_failed_protected)
+    val act: (FileEntry, FileAction) -> Unit = act@{ entry, action ->
         val file = File(ui.dir, entry.name)
         val targets = (if (entry.name in ui.selected) ui.selection else listOf(entry)).map { File(ui.dir, it.name) }
+        val removes = action == FileAction.MOVE_TO_OTHER || action == FileAction.TRASH || action == FileAction.DELETE
+        // Teclas y menús pasan por aquí: una carpeta protegida no se mueve ni se borra (ADR-A06).
+        if (removes && targets.any { ui.isProtected(it.name) }) {
+            scope.launch { snackbar.showSnackbar(protectedMessage) }
+            return@act
+        }
         val started =
             when {
                 action == FileAction.COPY_TO_OTHER || action == FileAction.MOVE_TO_OTHER -> {
@@ -486,6 +493,7 @@ private fun TabScreen(
                                 ui.visible,
                                 selected = ui.selected,
                                 activePane = chrome.active,
+                                isProtected = ui::isProtected,
                                 gestures = gestures,
                                 onAction = act,
                                 modifier = Modifier.fillMaxSize(),
@@ -496,6 +504,7 @@ private fun TabScreen(
                                 ui.nowMs,
                                 selected = ui.selected,
                                 activePane = chrome.active,
+                                isProtected = ui::isProtected,
                                 gestures = gestures,
                                 onAction = act,
                                 modifier = Modifier.fillMaxSize(),
