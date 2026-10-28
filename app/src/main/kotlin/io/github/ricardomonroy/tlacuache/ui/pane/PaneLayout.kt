@@ -84,6 +84,7 @@ import io.github.ricardomonroy.tlacuache.ops.Clipboard
 import io.github.ricardomonroy.tlacuache.ops.OpsRepository
 import io.github.ricardomonroy.tlacuache.state.WindowViewModel
 import io.github.ricardomonroy.tlacuache.ui.Shortcut
+import io.github.ricardomonroy.tlacuache.ui.WithTooltip
 import io.github.ricardomonroy.tlacuache.ui.ops.ClipboardPill
 import io.github.ricardomonroy.tlacuache.ui.ops.OpsConflictDialog
 import io.github.ricardomonroy.tlacuache.ui.ops.OpsIndicator
@@ -372,13 +373,18 @@ private fun PaneStrip(
         Box(Modifier.fillMaxHeight().width(1.dp).background(t.colors.borderStrong.color))
         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             val arrow = if (fromA) "→" else "←"
-            StripButton(arrow, R.string.strip_copy, R.string.action_copy_to_other, enabled) { onTransfer(OpKind.COPY) }
+            StripButton(arrow, R.string.strip_copy, R.string.action_copy_to_other, enabled, Shortcut.COPY_TO_OTHER) {
+                onTransfer(OpKind.COPY)
+            }
             StripButton(
                 arrow,
                 R.string.strip_move,
                 R.string.action_move_to_other,
                 moveEnabled,
-            ) { onTransfer(OpKind.MOVE) }
+                Shortcut.MOVE_TO_OTHER,
+            ) {
+                onTransfer(OpKind.MOVE)
+            }
         }
     }
 }
@@ -391,22 +397,26 @@ private fun StripButton(
     @StringRes label: Int,
     @StringRes description: Int,
     enabled: Boolean,
+    shortcut: Shortcut,
     onClick: () -> Unit,
 ) {
     val t = TlacuacheTheme.tokens
     val color = if (enabled) t.colors.accent.color else t.colors.fgMuted.color
     val text = stringResource(description)
-    Column(
-        Modifier
-            .width(StripWidth)
-            .background(t.colors.headerBg.color, MaterialTheme.shapes.small)
-            .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
-            .semantics { contentDescription = text }
-            .padding(vertical = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(arrow, color = color, style = MaterialTheme.typography.titleLarge)
-        Text(stringResource(label), color = color, style = MaterialTheme.typography.labelSmall)
+    WithTooltip(text, shortcut) {
+        Column(
+            Modifier
+                .width(StripWidth)
+                .background(t.colors.headerBg.color, MaterialTheme.shapes.small)
+                .pointerHoverIcon(PointerIcon.Hand)
+                .clickable(enabled = enabled, role = Role.Button, onClick = onClick)
+                .semantics { contentDescription = text }
+                .padding(vertical = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(arrow, color = color, style = MaterialTheme.typography.titleLarge)
+            Text(stringResource(label), color = color, style = MaterialTheme.typography.labelSmall)
+        }
     }
 }
 

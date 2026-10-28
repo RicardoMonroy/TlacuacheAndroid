@@ -4,6 +4,9 @@ import android.text.format.Formatter
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.hoverable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -47,6 +50,7 @@ import io.github.ricardomonroy.tlacuache.ffi.AgeUnit
 import io.github.ricardomonroy.tlacuache.ffi.FileEntry
 import io.github.ricardomonroy.tlacuache.ffi.age
 import io.github.ricardomonroy.tlacuache.ops.Clipboard
+import io.github.ricardomonroy.tlacuache.ui.rowHeight
 import io.github.ricardomonroy.tlacuache.ui.theme.TlacuacheTheme
 import io.github.ricardomonroy.tlacuache.ui.theme.color
 import java.text.DateFormat
@@ -72,9 +76,6 @@ enum class FileAction(
     PROPERTIES(R.string.action_properties),
     DELETE(R.string.action_delete),
 }
-
-// shortcut: filas de 48 dp (táctil); la densidad según el puntero llega en A4.2.
-private val RowHeight = 48.dp
 
 /** Columnas que caben según el ancho del panel: nombre siempre; luego edad, tamaño y fecha (UI_SPEC §2). */
 private data class Columns(
@@ -196,11 +197,21 @@ private fun RowContent(
 ) {
     val t = TlacuacheTheme.tokens
     val context = LocalContext.current
+    // Hover del ratón (UI_SPEC §3): resalta la fila bajo el puntero.
+    val hover = remember { MutableInteractionSource() }
+    val hovered by hover.collectIsHoveredAsState()
+    val background =
+        selection?.background ?: when {
+            hovered -> t.colors.hoverBg.color
+            alt -> t.colors.paneAltRow.color
+            else -> t.colors.paneBg.color
+        }
     Row(
         Modifier
             .fillMaxWidth()
-            .height(RowHeight)
-            .background(selection?.background ?: if (alt) t.colors.paneAltRow.color else t.colors.paneBg.color)
+            .height(rowHeight())
+            .hoverable(hover)
+            .background(background)
             .then(modifier)
             .semantics { selected = selection != null }
             .padding(horizontal = 12.dp),

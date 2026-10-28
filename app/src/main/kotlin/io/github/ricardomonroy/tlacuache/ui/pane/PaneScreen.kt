@@ -60,6 +60,11 @@ import androidx.compose.ui.input.key.onKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.key.utf16CodePoint
 import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerIcon
+import androidx.compose.ui.input.pointer.isBackPressed
+import androidx.compose.ui.input.pointer.isForwardPressed
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
@@ -85,6 +90,7 @@ import io.github.ricardomonroy.tlacuache.state.PaneState
 import io.github.ricardomonroy.tlacuache.state.PathInput
 import io.github.ricardomonroy.tlacuache.state.TabState
 import io.github.ricardomonroy.tlacuache.ui.Shortcut
+import io.github.ricardomonroy.tlacuache.ui.WithTooltip
 import io.github.ricardomonroy.tlacuache.ui.ops.DeleteConfirmation
 import io.github.ricardomonroy.tlacuache.ui.ops.NameDialog
 import io.github.ricardomonroy.tlacuache.ui.theme.TlacuacheTheme
@@ -452,7 +458,21 @@ private fun TabScreen(
         Modifier
             .fillMaxSize()
             .background(t.colors.paneBg.color)
-            .onKeyEvent { event ->
+            // Botones laterales del ratón: atrás y adelante en el historial de la pestaña (UI_SPEC §3).
+            .pointerInput(tab) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val e = awaitPointerEvent(PointerEventPass.Initial)
+                        if (e.type != PointerEventType.Press) continue
+                        when {
+                            e.buttons.isBackPressed -> tab.back()
+                            e.buttons.isForwardPressed -> tab.forward()
+                            else -> continue
+                        }
+                        e.changes.forEach { it.consume() }
+                    }
+                }
+            }.onKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
                 // Con el foco en el panel mismo, ↑/↓ entran a las filas.
                 if (paneFocused && (event.key == Key.DirectionDown || event.key == Key.DirectionUp)) {
@@ -536,9 +556,9 @@ private fun TabScreen(
                     .padding(horizontal = 4.dp, vertical = if (shortHeight) 0.dp else 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                NavButton("‹", R.string.nav_back, ui.canGoBack) { tab.back() }
-                NavButton("›", R.string.nav_forward, ui.canGoForward) { tab.forward() }
-                NavButton("↑", R.string.nav_up, ui.canGoUp) { tab.up() }
+                NavButton("‹", R.string.nav_back, ui.canGoBack, Shortcut.BACK) { tab.back() }
+                NavButton("›", R.string.nav_forward, ui.canGoForward, Shortcut.FORWARD) { tab.forward() }
+                NavButton("↑", R.string.nav_up, ui.canGoUp, Shortcut.UP) { tab.up() }
                 PathBar(
                     ui,
                     tab,
@@ -725,16 +745,23 @@ private fun NavButton(
     glyph: String,
     @StringRes label: Int,
     enabled: Boolean,
+    shortcut: Shortcut? = null,
     onClick: () -> Unit,
 ) {
     val t = TlacuacheTheme.tokens
     val description = stringResource(label)
-    IconButton(onClick, enabled = enabled, modifier = Modifier.semantics { contentDescription = description }) {
-        Text(
-            glyph,
-            color = if (enabled) t.colors.headerFg.color else t.colors.fgMuted.color,
-            style = MaterialTheme.typography.titleLarge,
-        )
+    WithTooltip(description, shortcut) {
+        IconButton(
+            onClick,
+            enabled = enabled,
+            modifier = Modifier.pointerHoverIcon(PointerIcon.Hand).semantics { contentDescription = description },
+        ) {
+            Text(
+                glyph,
+                color = if (enabled) t.colors.headerFg.color else t.colors.fgMuted.color,
+                style = MaterialTheme.typography.titleLarge,
+            )
+        }
     }
 }
 

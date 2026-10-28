@@ -11,10 +11,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.isCtrlPressed
 import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.isShiftPressed
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import io.github.ricardomonroy.tlacuache.ffi.FileEntry
 import io.github.ricardomonroy.tlacuache.state.TabState
@@ -98,6 +100,7 @@ fun Modifier.itemGestures(
 ): Modifier {
     val onClick = remember(gestures, entry) { { gestures.click(entry) } }
     return this
+        .pointerHoverIcon(PointerIcon.Hand)
         .pointerInput(entry.name) {
             // Clic derecho: el menú, sin seleccionar ni abrir.
             awaitPointerEventScope {

@@ -4,6 +4,14 @@ import android.content.Context
 import android.view.KeyboardShortcutGroup
 import android.view.KeyboardShortcutInfo
 import androidx.annotation.StringRes
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.PlainTooltip
+import androidx.compose.material3.Text
+import androidx.compose.material3.TooltipAnchorPosition
+import androidx.compose.material3.TooltipBox
+import androidx.compose.material3.TooltipDefaults
+import androidx.compose.material3.rememberTooltipState
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEvent
 import androidx.compose.ui.input.key.isAltPressed
@@ -12,6 +20,7 @@ import androidx.compose.ui.input.key.isMetaPressed
 import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.nativeKeyCode
+import androidx.compose.ui.res.stringResource
 import io.github.ricardomonroy.tlacuache.R
 import android.view.KeyEvent as AndroidKeyEvent
 
@@ -104,4 +113,45 @@ enum class Shortcut(
                     (if (shift) AndroidKeyEvent.META_SHIFT_ON else 0) or
                     (if (alt) AndroidKeyEvent.META_ALT_ON else 0)
     }
+}
+
+/** «Ctrl+Shift+N» de la primera combinación del atajo, para los tooltips. */
+@Composable
+fun Shortcut.keysLabel(): String {
+    val b = bindings.first()
+    val key =
+        when (b.key) {
+            Key.DirectionLeft -> "←"
+            Key.DirectionRight -> "→"
+            Key.DirectionUp -> "↑"
+            Key.Backspace -> stringResource(R.string.key_backspace)
+            Key.Delete -> stringResource(R.string.key_delete)
+            Key.Tab -> "Tab"
+            else -> AndroidKeyEvent.keyCodeToString(b.key.nativeKeyCode).removePrefix("KEYCODE_")
+        }
+    return listOfNotNull(
+        "Ctrl".takeIf {
+            b.ctrl
+        },
+        "Shift".takeIf { b.shift },
+        "Alt".takeIf { b.alt },
+        key,
+    ).joinToString("+")
+}
+
+/** Tooltip al pasar el ratón (o pulsación larga con el dedo): «Atrás (Alt+←)» (UI_SPEC §3). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun WithTooltip(
+    text: String,
+    shortcut: Shortcut?,
+    content: @Composable () -> Unit,
+) {
+    val full = shortcut?.let { "$text (${it.keysLabel()})" } ?: text
+    TooltipBox(
+        positionProvider = TooltipDefaults.rememberTooltipPositionProvider(TooltipAnchorPosition.Below),
+        tooltip = { PlainTooltip { Text(full) } },
+        state = rememberTooltipState(),
+        content = content,
+    )
 }

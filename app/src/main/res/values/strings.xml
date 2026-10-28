@@ -112,6 +112,8 @@
         <item quantity="one">%d carpeta</item>
         <item quantity="other">%d carpetas</item>
     </plurals>
+    <string name="key_backspace">Retroceso</string>
+    <string name="key_delete">Supr</string>
     <string name="shortcuts_navigation">Navegación</string>
     <string name="shortcuts_files">Archivos</string>
     <string name="shortcuts_window">Paneles y pestañas</string>

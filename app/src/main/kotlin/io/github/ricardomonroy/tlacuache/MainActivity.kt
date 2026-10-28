@@ -26,6 +26,7 @@ import io.github.ricardomonroy.tlacuache.ops.OpsRepository
 import io.github.ricardomonroy.tlacuache.state.WindowViewModel
 import io.github.ricardomonroy.tlacuache.storage.StorageAccess
 import io.github.ricardomonroy.tlacuache.ui.Shortcut
+import io.github.ricardomonroy.tlacuache.ui.TrackPointer
 import io.github.ricardomonroy.tlacuache.ui.pane.PaneLayout
 import io.github.ricardomonroy.tlacuache.ui.pane.thumbnailLoader
 import io.github.ricardomonroy.tlacuache.ui.theme.TlacuacheTheme
@@ -86,7 +87,7 @@ private fun App() {
         val window = viewModel<WindowViewModel>()
         val ready by window.ready.collectAsStateWithLifecycle()
         LifecycleEventEffect(Lifecycle.Event.ON_STOP) { window.saveSession() }
-        if (ready) PaneLayout(window)
+        if (ready) TrackPointer { PaneLayout(window) }
     } else {
         WelcomeScreen(onGranted = { granted = true })
     }
