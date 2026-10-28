@@ -38,6 +38,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.ricardomonroy.tlacuache.R
 import io.github.ricardomonroy.tlacuache.ffi.Age
 import io.github.ricardomonroy.tlacuache.ffi.AgeBucket
@@ -45,6 +46,7 @@ import io.github.ricardomonroy.tlacuache.ffi.AgeStyle
 import io.github.ricardomonroy.tlacuache.ffi.AgeUnit
 import io.github.ricardomonroy.tlacuache.ffi.FileEntry
 import io.github.ricardomonroy.tlacuache.ffi.age
+import io.github.ricardomonroy.tlacuache.ops.Clipboard
 import io.github.ricardomonroy.tlacuache.ui.theme.TlacuacheTheme
 import io.github.ricardomonroy.tlacuache.ui.theme.color
 import java.text.DateFormat
@@ -54,18 +56,20 @@ import java.util.Date
 enum class FileAction(
     @StringRes val label: Int,
 ) {
+    // Orden del menú contextual (UI_SPEC §4).
     OPEN(R.string.action_open),
     OPEN_WITH(R.string.action_open_with),
     SHARE(R.string.action_share),
-    ADD_FAVORITE(R.string.favorite_add),
-
-    // shortcut: en el menú hasta la franja central y la barra con destino (A3.3).
-    COPY(R.string.action_copy),
     CUT(R.string.action_cut),
+    COPY(R.string.action_copy),
+    PASTE(R.string.action_paste_into),
     COPY_TO_OTHER(R.string.action_copy_to_other),
     MOVE_TO_OTHER(R.string.action_move_to_other),
     RENAME(R.string.action_rename),
     TRASH(R.string.action_trash),
+    ADD_FAVORITE(R.string.favorite_add),
+    COPY_PATH(R.string.action_copy_path),
+    PROPERTIES(R.string.action_properties),
     DELETE(R.string.action_delete),
 }
 
@@ -133,21 +137,27 @@ private fun FileRow(
     }
 }
 
-/** Acciones que tienen sentido para [entry] (carpeta o archivo). */
+/**
+ * Acciones que tienen sentido para [items] (uno o varios): las de un solo elemento no se ofrecen con varios,
+ * mover y borrar no con carpetas protegidas (ADR-A06), Pegar solo sobre una carpeta y con algo copiado.
+ */
 internal fun FileAction.appliesTo(
-    entry: FileEntry,
+    items: List<FileEntry>,
     protected: Boolean,
-): Boolean =
-    when (this) {
-        FileAction.OPEN, FileAction.COPY, FileAction.COPY_TO_OTHER -> true
-
-        // Carpetas protegidas (ADR-A06): no se mueven ni se borran, desde ningún camino.
-        FileAction.CUT, FileAction.MOVE_TO_OTHER, FileAction.RENAME, FileAction.TRASH, FileAction.DELETE -> !protected
-
-        FileAction.ADD_FAVORITE -> entry.isDir
-
-        FileAction.OPEN_WITH, FileAction.SHARE -> !entry.isDir
+    canPaste: Boolean,
+): Boolean {
+    val one = items.singleOrNull()
+    return when (this) {
+        FileAction.OPEN -> one != null
+        FileAction.OPEN_WITH -> one?.isDir == false
+        FileAction.SHARE -> items.any { !it.isDir }
+        FileAction.CUT, FileAction.MOVE_TO_OTHER, FileAction.TRASH, FileAction.DELETE -> !protected
+        FileAction.RENAME -> one != null && !protected
+        FileAction.COPY, FileAction.COPY_TO_OTHER, FileAction.COPY_PATH, FileAction.PROPERTIES -> true
+        FileAction.PASTE -> canPaste && one?.isDir == true
+        FileAction.ADD_FAVORITE -> one?.isDir == true
     }
+}
 
 /** Menú de pulsación larga de un elemento (lista y cuadrícula). */
 @Composable
@@ -158,10 +168,11 @@ internal fun FileMenu(
     onDismiss: () -> Unit,
     onAction: (FileAction) -> Unit,
 ) {
-    // shortcut: menú mínimo por pulsación larga hasta la selección (A3.4) y el menú contextual completo (A3.11).
+    // Menú contextual (UI_SPEC §4): pulsación larga sobre lo seleccionado o clic derecho.
+    val canPaste = Clipboard.clip.collectAsStateWithLifecycle().value != null
     DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
         FileAction.entries
-            .filter { it.appliesTo(entry, protected) }
+            .filter { it.appliesTo(listOf(entry), protected, canPaste) }
             .forEach { action ->
                 DropdownMenuItem(
                     text = { Text(stringResource(action.label)) },

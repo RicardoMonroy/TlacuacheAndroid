@@ -94,6 +94,24 @@
         <item quantity="one">%d elemento para mover aquí</item>
         <item quantity="other">%d elementos para mover aquí</item>
     </plurals>
+    <string name="action_paste_into">Pegar dentro</string>
+    <string name="action_copy_path">Copiar ruta</string>
+    <string name="action_properties">Propiedades</string>
+    <string name="props_type">Tipo</string>
+    <string name="props_location">Ubicación</string>
+    <string name="props_size">Tamaño</string>
+    <string name="props_modified">Modificado</string>
+    <string name="props_calculating">Calculando…</string>
+    <string name="props_unknown_type">Desconocido</string>
+    <string name="props_size_contents">%1$s · %2$s, %3$s</string>
+    <plurals name="props_files">
+        <item quantity="one">%d archivo</item>
+        <item quantity="other">%d archivos</item>
+    </plurals>
+    <plurals name="props_folders">
+        <item quantity="one">%d carpeta</item>
+        <item quantity="other">%d carpetas</item>
+    </plurals>
     <string name="action_copy_to_other">Copiar al otro panel</string>
     <string name="action_move_to_other">Mover al otro panel</string>
     <string name="ops_channel">Operaciones de archivos</string>

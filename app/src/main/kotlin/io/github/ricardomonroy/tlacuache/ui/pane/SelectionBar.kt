@@ -24,7 +24,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.ricardomonroy.tlacuache.R
+import io.github.ricardomonroy.tlacuache.ops.Clipboard
 import io.github.ricardomonroy.tlacuache.state.TabState
 import io.github.ricardomonroy.tlacuache.ui.theme.TlacuacheTheme
 import io.github.ricardomonroy.tlacuache.ui.theme.color
@@ -44,18 +46,8 @@ fun SelectionBar(
     val t = TlacuacheTheme.tokens
     var menu by remember { mutableStateOf(false) }
     val selection = ui.selection
-    // Con uno solo, lo mismo que su pulsación larga; con varios, lo que vale para todos.
-    val actions =
-        FileAction.entries.filter { action ->
-            if (selection.size == 1) {
-                action.appliesTo(selection.single(), ui.selectionProtected)
-            } else {
-                action == FileAction.COPY ||
-                    action == FileAction.COPY_TO_OTHER ||
-                    (!ui.selectionProtected && action in REMOVING) ||
-                    (action == FileAction.SHARE && selection.any { !it.isDir })
-            }
-        }
+    val canPaste = Clipboard.clip.collectAsStateWithLifecycle().value != null
+    val actions = FileAction.entries.filter { it.appliesTo(selection, ui.selectionProtected, canPaste) }
     Row(
         Modifier
             .fillMaxWidth()
@@ -131,6 +123,3 @@ fun SelectionActions(
         }
     }
 }
-
-/** Acciones que quitan algo de su carpeta: no se ofrecen sobre carpetas protegidas (ADR-A06). */
-private val REMOVING = setOf(FileAction.CUT, FileAction.MOVE_TO_OTHER, FileAction.TRASH, FileAction.DELETE)

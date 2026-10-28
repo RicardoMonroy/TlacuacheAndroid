@@ -1,5 +1,7 @@
 package io.github.ricardomonroy.tlacuache.ui.pane
 
+import android.content.ClipData
+import android.content.ClipboardManager
 import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
@@ -197,6 +199,8 @@ private fun TabScreen(
     var confirmDelete by remember { mutableStateOf<List<File>?>(null) }
     // Diálogo de nombre abierto: renombrar este elemento, o crear una carpeta o un archivo vacío.
     var naming by remember { mutableStateOf<Naming?>(null) }
+    var properties by remember { mutableStateOf<List<File>?>(null) }
+    val pathLabel = stringResource(R.string.action_copy_path)
     val context = LocalContext.current
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -225,6 +229,25 @@ private fun TabScreen(
                 action == FileAction.COPY_TO_OTHER || action == FileAction.MOVE_TO_OTHER -> {
                     chrome.onTransfer(if (action == FileAction.COPY_TO_OTHER) OpKind.COPY else OpKind.MOVE, targets)
                     tab.clearSelection()
+                    true
+                }
+
+                action == FileAction.PASTE -> {
+                    Clipboard.paste(file)?.let(chrome.onRun)
+                    true
+                }
+
+                action == FileAction.COPY_PATH -> {
+                    // Rutas al portapapeles del sistema, una por línea, para pegarlas en otra app.
+                    context.getSystemService(ClipboardManager::class.java).setPrimaryClip(
+                        ClipData.newPlainText(pathLabel, targets.joinToString("\n") { it.path }),
+                    )
+                    tab.clearSelection()
+                    true
+                }
+
+                action == FileAction.PROPERTIES -> {
+                    properties = targets
                     true
                 }
 
@@ -275,6 +298,7 @@ private fun TabScreen(
         if (!started) scope.launch { snackbar.showSnackbar(noApp) }
     }
     val currentAct by rememberUpdatedState(act)
+    properties?.let { PropertiesDialog(it) { properties = null } }
     naming?.let { n ->
         NameDialog(
             n.title,
