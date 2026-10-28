@@ -295,6 +295,7 @@ class WindowViewModel(
                         tabAt(File(t.path)).apply {
                             setIconView(t.iconView)
                             setShowHidden(t.showHidden)
+                            setSort(t.sort)
                         }
                     }
                 pane.restore(tabs, saved.selected.toInt())
@@ -319,7 +320,7 @@ class WindowViewModel(
                             tabs.active.toUInt(),
                             tabs.list.map {
                                 it.ui.value.let { ui ->
-                                    SessionTab(ui.dir.path, ui.iconView, ui.showHidden)
+                                    SessionTab(ui.dir.path, ui.iconView, ui.showHidden, ui.sort)
                                 }
                             },
                         )

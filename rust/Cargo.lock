@@ -585,7 +585,7 @@ dependencies = [
 [[package]]
 name = "tlacuache-core"
 version = "0.2.0"
-source = "git+https://github.com/RicardoMonroy/Tlacuache?tag=v0.2.2#c4a1fe006f0aadb7dfd4c4b143170289a09ba036"
+source = "git+https://github.com/RicardoMonroy/Tlacuache?tag=v0.2.3#0939a20c6bec1ed9ccb9d1eb8606f72fb7f3c743"
 dependencies = [
  "pulldown-cmark",
  "regex",

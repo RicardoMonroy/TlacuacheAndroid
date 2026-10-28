@@ -228,6 +228,13 @@ class TabState(
         rearrange()
     }
 
+    /** El orden guardado en la sesión (A4.8). */
+    fun setSort(spec: SortSpec) {
+        if (_ui.value.sort == spec) return
+        _ui.update { it.copy(sort = spec) }
+        rearrange()
+    }
+
     fun setIconView(on: Boolean) = _ui.update { it.copy(iconView = on) }
 
     fun toggleHidden() = setShowHidden(!_ui.value.showHidden)

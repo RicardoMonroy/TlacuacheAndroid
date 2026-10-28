@@ -7,11 +7,15 @@
 use tlacuache_core::config::ViewMode;
 use tlacuache_core::session::{PaneSession, Session, TabSession};
 
+use crate::listing::SortSpec;
+
 #[derive(Debug, Clone, PartialEq, uniffi::Record)]
 pub struct SessionTab {
     pub path: String,
     pub icon_view: bool,
     pub show_hidden: bool,
+    /// Orden de la lista (A4.8); sesiones viejas: por nombre ascendente.
+    pub sort: SortSpec,
 }
 
 #[derive(Debug, Clone, PartialEq, uniffi::Record)]
@@ -52,6 +56,7 @@ pub fn session_from_toml(text: String) -> Option<SessionState> {
                         path: t.uri,
                         icon_view: t.view == ViewMode::Icons,
                         show_hidden: t.show_hidden,
+                        sort: t.sort.into(),
                     })
                     .collect(),
             })
@@ -83,6 +88,7 @@ pub fn session_to_toml(state: SessionState) -> String {
                         ViewMode::Details
                     },
                     show_hidden: t.show_hidden,
+                    sort: t.sort.into(),
                 })
                 .collect(),
             ..PaneSession::default()
@@ -95,6 +101,12 @@ pub fn session_to_toml(state: SessionState) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::listing::SortKey;
+
+    const NAME_ASC: SortSpec = SortSpec {
+        key: SortKey::Name,
+        descending: false,
+    };
 
     #[test]
     fn round_trip_and_sanitizing() {
@@ -111,11 +123,16 @@ mod tests {
                             path: "/storage/emulated/0".into(),
                             icon_view: false,
                             show_hidden: false,
+                            sort: SortSpec {
+                                key: SortKey::Size,
+                                descending: true,
+                            },
                         },
                         SessionTab {
                             path: "/storage/emulated/0/DCIM".into(),
                             icon_view: true,
                             show_hidden: true,
+                            sort: NAME_ASC,
                         },
                     ],
                 },
@@ -125,6 +142,10 @@ mod tests {
                         path: "/storage/emulated/0/Download".into(),
                         icon_view: false,
                         show_hidden: false,
+                        sort: SortSpec {
+                            key: SortKey::Modified,
+                            descending: false,
+                        },
                     }],
                 },
             ],
@@ -140,5 +161,10 @@ mod tests {
                 .unwrap();
         assert_eq!(fixed.panes_ratio, Some(0.9));
         assert_eq!(fixed.panes[0].selected, 0);
+        // Una sesión de antes de A4.8 ordena por nombre.
+        let old =
+            session_from_toml("[[panes]]\n[[panes.tabs]]\npath = \"x\"\nuri = \"/x\"\n".into())
+                .unwrap();
+        assert_eq!(old.panes[0].tabs[0].sort, NAME_ASC);
     }
 }

@@ -97,6 +97,20 @@ impl From<SortSpec> for core_sort::SortSpec {
     }
 }
 
+impl From<core_sort::SortSpec> for SortSpec {
+    fn from(s: core_sort::SortSpec) -> Self {
+        Self {
+            key: match s.key {
+                core_sort::SortKey::Name => SortKey::Name,
+                core_sort::SortKey::Extension => SortKey::Extension,
+                core_sort::SortKey::Size => SortKey::Size,
+                core_sort::SortKey::Modified => SortKey::Modified,
+            },
+            descending: s.direction == core_sort::SortDirection::Descending,
+        }
+    }
+}
+
 /// Índices de `entries` que se muestran, ya ordenados: filtro de ocultos y
 /// filtro rápido (`core::filter`) y orden natural con carpetas primero
 /// (`core::sort`). Una sola llamada por listado.
