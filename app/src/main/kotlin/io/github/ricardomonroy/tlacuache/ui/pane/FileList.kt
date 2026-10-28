@@ -63,6 +63,7 @@ enum class FileAction(
     // Orden del menú contextual (UI_SPEC §4).
     OPEN(R.string.action_open),
     OPEN_WITH(R.string.action_open_with),
+    OPEN_IN_NEW_WINDOW(R.string.action_open_new_window),
     SHARE(R.string.action_share),
     CUT(R.string.action_cut),
     COPY(R.string.action_copy),
@@ -165,6 +166,7 @@ internal fun FileAction.appliesTo(
     val one = items.singleOrNull()
     return when (this) {
         FileAction.OPEN -> one != null
+        FileAction.OPEN_IN_NEW_WINDOW -> one?.isDir == true
         FileAction.OPEN_WITH -> one?.isDir == false
         FileAction.SHARE -> items.any { !it.isDir }
         FileAction.CUT, FileAction.MOVE_TO_OTHER, FileAction.TRASH, FileAction.DELETE -> !protected

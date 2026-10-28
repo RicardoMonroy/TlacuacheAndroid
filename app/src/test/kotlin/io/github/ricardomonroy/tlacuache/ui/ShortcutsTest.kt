@@ -20,6 +20,7 @@ class ShortcutsTest {
         assertEquals(Shortcut.NEXT_TAB, Shortcut.of(Binding(Key.Tab, ctrl = true)))
         assertEquals(Shortcut.PREVIOUS_TAB, Shortcut.of(Binding(Key.Tab, ctrl = true, shift = true)))
         assertEquals(Shortcut.NEW_FOLDER, Shortcut.of(Binding(Key.N, ctrl = true, shift = true)))
-        assertNull(Shortcut.of(Binding(Key.N, ctrl = true)))
+        assertEquals(Shortcut.NEW_WINDOW, Shortcut.of(Binding(Key.N, ctrl = true)))
+        assertNull(Shortcut.of(Binding(Key.Q, ctrl = true)))
     }
 }

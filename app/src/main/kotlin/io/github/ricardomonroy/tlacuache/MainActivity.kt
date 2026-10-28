@@ -1,5 +1,7 @@
 package io.github.ricardomonroy.tlacuache
 
+import android.content.Context
+import android.content.Intent
 import android.graphics.Color.TRANSPARENT
 import android.os.Bundle
 import android.view.KeyboardShortcutGroup
@@ -31,8 +33,24 @@ import io.github.ricardomonroy.tlacuache.ui.pane.PaneLayout
 import io.github.ricardomonroy.tlacuache.ui.pane.thumbnailLoader
 import io.github.ricardomonroy.tlacuache.ui.theme.TlacuacheTheme
 import io.github.ricardomonroy.tlacuache.ui.welcome.WelcomeScreen
+import java.io.File
 
 class MainActivity : ComponentActivity() {
+    companion object {
+        /** Ventana nueva en [dir] (A4.5): al lado con pantalla dividida o en modo escritorio, si no, una tarea aparte. */
+        fun openWindow(
+            context: Context,
+            dir: File,
+        ) = context.startActivity(
+            Intent(context, MainActivity::class.java)
+                .putExtra(WindowViewModel.EXTRA_PATH, dir.path)
+                .addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_MULTIPLE_TASK or
+                        Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT,
+                ),
+        )
+    }
+
     override fun onStart() {
         super.onStart()
         OpsRepository.windowShown()

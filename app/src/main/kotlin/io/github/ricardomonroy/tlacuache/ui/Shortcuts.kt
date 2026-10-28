@@ -69,6 +69,7 @@ enum class Shortcut(
     OTHER_PANE(R.string.shortcut_other_pane, Group.WINDOW, Binding(Key.Tab)),
     TOGGLE_DUAL(R.string.menu_dual_pane, Group.WINDOW, Binding(Key.F3)),
     SIDEBAR(R.string.shortcut_sidebar, Group.WINDOW, Binding(Key.F9)),
+    NEW_WINDOW(R.string.new_window, Group.WINDOW, Binding(Key.N, ctrl = true)),
     NEW_TAB(R.string.tab_new, Group.WINDOW, Binding(Key.T, ctrl = true)),
     CLOSE_TAB(R.string.tab_close, Group.WINDOW, Binding(Key.W, ctrl = true)),
     NEXT_TAB(R.string.shortcut_next_tab, Group.WINDOW, Binding(Key.Tab, ctrl = true)),

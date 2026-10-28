@@ -72,4 +72,14 @@ class FavoritesStore(
         }
 
     private fun write(text: String) = writeAtomically(file, text)
+
+    companion object {
+        @Volatile private var shared: FavoritesStore? = null
+
+        /** Uno por proceso: con varias ventanas (A4.5) todas ven y guardan los mismos favoritos. */
+        fun shared(
+            file: File,
+            home: File,
+        ): FavoritesStore = shared ?: synchronized(this) { shared ?: FavoritesStore(file, home).also { shared = it } }
+    }
 }

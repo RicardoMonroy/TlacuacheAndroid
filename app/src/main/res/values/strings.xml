@@ -94,6 +94,8 @@
         <item quantity="one">%d elemento para mover aquí</item>
         <item quantity="other">%d elementos para mover aquí</item>
     </plurals>
+    <string name="new_window">Ventana nueva</string>
+    <string name="action_open_new_window">Abrir en ventana nueva</string>
     <string name="action_paste_into">Pegar dentro</string>
     <string name="action_copy_path">Copiar ruta</string>
     <string name="action_properties">Propiedades</string>

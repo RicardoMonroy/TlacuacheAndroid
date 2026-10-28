@@ -55,6 +55,9 @@ class WindowViewModel(
 
     private val startDir = startDir(savedState.get<String>(EXTRA_PATH))
 
+    /** La ventana principal restaura y guarda la sesión; las abiertas en una carpeta (A4.5) no la tocan. */
+    private val mainWindow = savedState.get<String>(EXTRA_PATH) == null
+
     private fun newTab(dir: File) =
         TabState(
             scope = viewModelScope,
@@ -119,8 +122,7 @@ class WindowViewModel(
             .flowOn(Dispatchers.IO)
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
-    // shortcut: un almacén por ventana; con varias ventanas (A4.5) debe compartirse.
-    private val favoritesStore = FavoritesStore(File(app.filesDir, "config.toml"), internalRoot)
+    private val favoritesStore = FavoritesStore.shared(File(app.filesDir, "config.toml"), internalRoot)
 
     /** Grupos de favoritos con rutas absolutas (UI_SPEC §6). */
     val favorites: StateFlow<List<FavoriteGroup>> = favoritesStore.groups
@@ -193,7 +195,7 @@ class WindowViewModel(
         viewModelScope.launch(Dispatchers.IO) { TrashStore({ Volumes.roots(app) }).purge() }
         viewModelScope.launch {
             // Una ventana abierta en una carpeta concreta (A4.5) no restaura la sesión.
-            if (savedState.get<String>(EXTRA_PATH) == null) sessionStore.load()?.let(::restore)
+            if (mainWindow) sessionStore.load()?.let(::restore)
             _ready.value = true
         }
     }
@@ -219,6 +221,7 @@ class WindowViewModel(
 
     /** Guarda la sesión con `core::session` (al pasar a segundo plano: después el sistema puede matar el proceso). */
     fun saveSession() {
+        if (!mainWindow) return
         val state =
             SessionState(
                 dualPane = _dual.value,

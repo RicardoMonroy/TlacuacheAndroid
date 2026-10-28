@@ -78,6 +78,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.ricardomonroy.tlacuache.MainActivity
 import io.github.ricardomonroy.tlacuache.R
 import io.github.ricardomonroy.tlacuache.ffi.FileEntry
 import io.github.ricardomonroy.tlacuache.ffi.FilterKey
@@ -241,6 +242,11 @@ private fun TabScreen(
                 action == FileAction.COPY_TO_OTHER || action == FileAction.MOVE_TO_OTHER -> {
                     chrome.onTransfer(if (action == FileAction.COPY_TO_OTHER) OpKind.COPY else OpKind.MOVE, targets)
                     tab.clearSelection()
+                    true
+                }
+
+                action == FileAction.OPEN_IN_NEW_WINDOW -> {
+                    MainActivity.openWindow(context, file)
                     true
                 }
 
@@ -608,6 +614,13 @@ private fun TabScreen(
                             onClick = {
                                 moreMenu = false
                                 tab.setIconView(!ui.iconView)
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.new_window)) },
+                            onClick = {
+                                moreMenu = false
+                                MainActivity.openWindow(context, ui.dir)
                             },
                         )
                         DropdownMenuItem(

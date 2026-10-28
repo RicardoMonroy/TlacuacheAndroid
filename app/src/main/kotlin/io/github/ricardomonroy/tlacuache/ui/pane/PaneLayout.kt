@@ -80,6 +80,7 @@ import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import io.github.ricardomonroy.tlacuache.MainActivity
 import io.github.ricardomonroy.tlacuache.R
 import io.github.ricardomonroy.tlacuache.ffi.OpKind
 import io.github.ricardomonroy.tlacuache.ffi.OpRequest
@@ -259,6 +260,7 @@ fun PaneLayout(window: WindowViewModel) {
                                 Shortcut.MOVE_TO_OTHER -> transferSelection(OpKind.MOVE)
                                 Shortcut.PASTE -> paste()
                                 Shortcut.UNDO -> OpsRepository.undoLast(context)
+                                Shortcut.NEW_WINDOW -> MainActivity.openWindow(context, activeTabs.current.ui.value.dir)
                                 else -> return@onKeyEvent false
                             }
                             true
