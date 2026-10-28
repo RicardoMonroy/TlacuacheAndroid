@@ -59,6 +59,7 @@ import androidx.compose.ui.input.key.isMetaPressed
 import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
@@ -83,6 +84,7 @@ import io.github.ricardomonroy.tlacuache.ffi.OpRequest
 import io.github.ricardomonroy.tlacuache.ops.Clipboard
 import io.github.ricardomonroy.tlacuache.ops.OpsRepository
 import io.github.ricardomonroy.tlacuache.state.WindowViewModel
+import io.github.ricardomonroy.tlacuache.storage.Volumes
 import io.github.ricardomonroy.tlacuache.ui.Shortcut
 import io.github.ricardomonroy.tlacuache.ui.WithTooltip
 import io.github.ricardomonroy.tlacuache.ui.ops.ClipboardPill
@@ -137,11 +139,6 @@ fun PaneLayout(window: WindowViewModel) {
     // El gesto atrás cierra el cajón antes que nada; mientras está abierto ningún panel lo atiende.
     BackHandler(drawer.isOpen) { scope.launch { drawer.close() } }
     var showTrash by rememberSaveable { mutableStateOf(false) }
-    val items =
-        sidebarItems(window, active, onTrash = {
-            showTrash = true
-            scope.launch { drawer.close() }
-        }) { dir -> window.openInActive(dir).also { scope.launch { drawer.close() } } }
     val t = TlacuacheTheme.tokens
     var rowWidth by remember { mutableFloatStateOf(1f) }
     // Cada panel conserva sitio para botones y ruta; en un teléfono horizontal el divisor apenas se mueve.
@@ -170,7 +167,16 @@ fun PaneLayout(window: WindowViewModel) {
         askNotifications()
         OpsRepository.enqueue(context, request)
     }
+    // Soltar archivos arrastrados (A4.3): mover en el mismo volumen, copiar entre volúmenes; Ctrl/Shift fuerzan.
+    val drop: (List<File>, File) -> Unit = { files, dest ->
+        run(OpRequest(dropKind(files, dest, Volumes.roots(context)), files.map { it.path }, dest.path, emptyList()))
+    }
     if (showTrash) TrashScreen(onClose = { showTrash = false }, run = remove)
+    val items =
+        sidebarItems(window, active, onDrop = drop, onTrash = {
+            showTrash = true
+            scope.launch { drawer.close() }
+        }) { dir -> window.openInActive(dir).also { scope.launch { drawer.close() } } }
     // Franja central y F5/F6: la selección del panel activo al otro (UI_SPEC §4).
     val activeTabs by window.panes[active].tabs.collectAsStateWithLifecycle()
     // Pegar el portapapeles interno en la carpeta de la pestaña activa del panel activo.
@@ -203,7 +209,14 @@ fun PaneLayout(window: WindowViewModel) {
             if (result == SnackbarResult.ActionPerformed) OpsRepository.undo(context, op.id)
         }
     }
-    Box(Modifier.fillMaxSize()) {
+    Box(
+        Modifier.fillMaxSize().onPreviewKeyEvent {
+            // Ctrl y Shift al soltar un arrastre (copiar o mover): el evento de soltar no los trae.
+            DragKeys.ctrl = it.isCtrlPressed
+            DragKeys.shift = it.isShiftPressed
+            false
+        },
+    ) {
         ModalNavigationDrawer(
             drawerContent = {
                 // Como cajón llega al borde de la pantalla: nada bajo la cámara en horizontal.
@@ -279,6 +292,7 @@ fun PaneLayout(window: WindowViewModel) {
                                 onTransfer = { kind, files -> transfer(kind, files, 1 - i) },
                                 onRemove = remove,
                                 onRun = run,
+                                onDrop = drop,
                                 modifier = Modifier.weight(if (i == 0) shownSplit else 1 - shownSplit),
                             )
                         }
@@ -298,6 +312,7 @@ fun PaneLayout(window: WindowViewModel) {
                             onTransfer = { kind, files -> transfer(kind, files, 1 - active) },
                             onRemove = remove,
                             onRun = run,
+                            onDrop = drop,
                             otherPane = if (active == 0) "B" else "A",
                             modifier = Modifier.weight(1f),
                         )
@@ -328,6 +343,7 @@ fun PaneLayout(window: WindowViewModel) {
 private fun sidebarItems(
     window: WindowViewModel,
     active: Int,
+    onDrop: (List<File>, File) -> Unit,
     onTrash: () -> Unit,
     onOpen: (File) -> Unit,
 ): SidebarItems {
@@ -336,7 +352,7 @@ private fun sidebarItems(
     val favorites by window.favorites.collectAsStateWithLifecycle()
     val tabs by window.panes[active].tabs.collectAsStateWithLifecycle()
     val ui by tabs.current.ui.collectAsStateWithLifecycle()
-    return SidebarItems(places, volumes, favorites, ui.dir, onOpen, window::editFavorites, onTrash)
+    return SidebarItems(places, volumes, favorites, ui.dir, onOpen, window::editFavorites, onTrash, onDrop)
 }
 
 /** ☰ en la cabecera del panel (compacta): abre el cajón con la barra lateral. */

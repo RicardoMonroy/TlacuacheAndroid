@@ -96,6 +96,7 @@ fun FileList(
     activePane: Boolean,
     isProtected: (String) -> Boolean,
     gestures: ItemGestures,
+    drag: ItemDrag,
     onAction: (FileEntry, FileAction) -> Unit,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(),
@@ -112,6 +113,7 @@ fun FileList(
                     alt = index % 2 == 1,
                     selection = selectionColors(entry.name in selected, activePane),
                     gestures = gestures,
+                    drag = drag,
                     protected = isProtected(entry.name),
                     onAction = { onAction(entry, it) },
                 )
@@ -128,12 +130,25 @@ private fun FileRow(
     alt: Boolean,
     selection: SelectionColors?,
     gestures: ItemGestures,
+    drag: ItemDrag,
     protected: Boolean,
     onAction: (FileAction) -> Unit,
 ) {
     var menu by remember { mutableStateOf(false) }
+    var dropHere by remember { mutableStateOf(false) }
     Box {
-        RowContent(entry, nowMs, columns, alt, selection, Modifier.itemGestures(gestures, entry) { menu = true })
+        RowContent(
+            entry,
+            nowMs,
+            columns,
+            alt,
+            // Una carpeta con algo arrastrado encima se resalta como seleccionada.
+            if (dropHere) selectionColors(selected = true, activePane = true) else selection,
+            Modifier
+                .itemGestures(gestures, entry) { menu = true }
+                // Por dentro del clic: el arrastre ve los eventos antes que la pulsación.
+                .itemDrag(drag, entry, onStart = { menu = false }) { dropHere = it },
+        )
         FileMenu(entry, protected, menu, { menu = false }, onAction)
     }
 }

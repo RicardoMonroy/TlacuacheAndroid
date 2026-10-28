@@ -27,8 +27,9 @@ import io.github.ricardomonroy.tlacuache.state.TabState
  * | | Táctil | Ratón |
  * |---|---|---|
  * | Abrir | toque | doble clic |
- * | Seleccionar | pulsación larga entra al modo selección; luego el toque alterna | clic; Ctrl+clic alterna; Shift+clic rango |
- * | Menú | pulsación larga sobre un elemento ya seleccionado | clic derecho |
+ * | Seleccionar | pulsación larga entra al modo selección (y empieza a arrastrar); luego el toque alterna | clic; Ctrl+clic alterna; Shift+clic rango |
+ * | Menú | ⋮ de la barra de la selección | clic derecho |
+ * | Arrastrar | pulsación larga sobre lo seleccionado y mover | arrastrar |
  *
  * Enter con teclado abre. El tipo de puntero lo anota [trackPointer] en la lista, antes que las filas.
  */
@@ -75,14 +76,6 @@ class ItemGestures(
         }
     }
 
-    /** Pulsación larga táctil: entra al modo selección, o abre el menú si ya estaba seleccionado. */
-    fun longPress(
-        entry: FileEntry,
-        showMenu: () -> Unit,
-    ) {
-        if (entry.name in tab.ui.value.selected) showMenu() else tab.toggle(entry.name)
-    }
-
     /** Doble clic con ratón: abre. */
     fun doubleClick(entry: FileEntry) = open(entry)
 
@@ -114,7 +107,8 @@ fun Modifier.itemGestures(
             }
         }.combinedClickable(
             onClick = onClick,
-            onLongClick = if (gestures.mouse) null else ({ gestures.longPress(entry, showMenu) }),
+            // La pulsación larga con el dedo la atiende el arrastre (selecciona y arrastra, A4.3); el menú está en ⋮.
+            onLongClick = null,
             // Solo con ratón: con táctil, esperar un posible doble toque retrasaría cada apertura.
             onDoubleClick = if (gestures.mouse) ({ gestures.doubleClick(entry) }) else null,
         )

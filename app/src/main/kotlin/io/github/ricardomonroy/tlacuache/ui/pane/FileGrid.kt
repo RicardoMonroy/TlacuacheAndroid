@@ -49,6 +49,7 @@ fun FileGrid(
     activePane: Boolean,
     isProtected: (String) -> Boolean,
     gestures: ItemGestures,
+    drag: ItemDrag,
     onAction: (FileEntry, FileAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -60,7 +61,14 @@ fun FileGrid(
     ) {
         // El nombre es la identidad, como en la lista (ADR-A10).
         items(entries, key = { it.name }) { entry ->
-            Cell(dir, entry, selectionColors(entry.name in selected, activePane), gestures, isProtected(entry.name)) {
+            Cell(
+                dir,
+                entry,
+                selectionColors(entry.name in selected, activePane),
+                gestures,
+                drag,
+                isProtected(entry.name),
+            ) {
                 onAction(entry, it)
             }
         }
@@ -73,18 +81,23 @@ private fun Cell(
     entry: FileEntry,
     selection: SelectionColors?,
     gestures: ItemGestures,
+    drag: ItemDrag,
     protected: Boolean,
     onAction: (FileAction) -> Unit,
 ) {
     val t = TlacuacheTheme.tokens
     var menu by remember { mutableStateOf(false) }
+    var dropHere by remember { mutableStateOf(false) }
+    val shown = if (dropHere) selectionColors(selected = true, activePane = true) else selection
     Box {
         Column(
             Modifier
                 .fillMaxWidth()
                 .clip(MaterialTheme.shapes.small)
-                .background(selection?.background ?: t.colors.paneBg.color)
+                .background(shown?.background ?: t.colors.paneBg.color)
                 .itemGestures(gestures, entry) { menu = true }
+                // Por dentro del clic: el arrastre ve los eventos antes que la pulsación.
+                .itemDrag(drag, entry, onStart = { menu = false }) { dropHere = it }
                 .semantics { selected = selection != null }
                 .padding(4.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -102,7 +115,7 @@ private fun Cell(
             )
             Text(
                 entry.name,
-                color = selection?.content ?: t.colors.fg.color,
+                color = shown?.content ?: t.colors.fg.color,
                 style = MaterialTheme.typography.bodySmall,
                 textAlign = TextAlign.Center,
                 maxLines = 2,

@@ -28,7 +28,10 @@ import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.NavigationRailItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -46,6 +49,7 @@ import io.github.ricardomonroy.tlacuache.ffi.usage
 import io.github.ricardomonroy.tlacuache.state.Place
 import io.github.ricardomonroy.tlacuache.storage.FavoritesStore
 import io.github.ricardomonroy.tlacuache.storage.Volume
+import io.github.ricardomonroy.tlacuache.ui.pane.fileDropTarget
 import io.github.ricardomonroy.tlacuache.ui.theme.TlacuacheTheme
 import io.github.ricardomonroy.tlacuache.ui.theme.color
 import java.io.File
@@ -65,6 +69,8 @@ class SidebarItems(
     val editFavorites: (change: (Favorites) -> Unit, onResult: (FavoritesStore.Result) -> Unit) -> Unit,
     /** Abre la vista de la papelera (todos los volúmenes). */
     val onTrash: () -> Unit,
+    /** Soltar archivos arrastrados en un lugar, favorito o volumen (A4.3). */
+    val onDrop: (List<File>, File) -> Unit,
 ) {
     /** Rótulo de una carpeta: el nombre del volumen si es su raíz, si no el de la carpeta. */
     fun labelOf(dir: File): String = volumes.firstOrNull { it.root == dir }?.name ?: dir.name
@@ -93,12 +99,26 @@ fun Sidebar(
         MenuButton(menuLabel, onMenu)
         SectionTitle(R.string.sidebar_places)
         items.places.forEach { place ->
-            Entry(place.kind.icon, stringResource(place.label), place.dir == items.current, { items.onOpen(place.dir) })
+            Entry(
+                place.kind.icon,
+                stringResource(place.label),
+                place.dir == items.current,
+                { items.onOpen(place.dir) },
+                dropDir = place.dir,
+                onDrop = items.onDrop,
+            )
         }
         FavoritesSection(items)
         SectionTitle(R.string.sidebar_volumes)
         items.volumes.forEach { volume ->
-            Entry(volume.kind.icon, volume.name, volume.root == items.current, { items.onOpen(volume.root) }, null) {
+            Entry(
+                volume.kind.icon,
+                volume.name,
+                volume.root == items.current,
+                { items.onOpen(volume.root) },
+                dropDir = volume.root,
+                onDrop = items.onDrop,
+            ) {
                 VolumeUsage(volume)
             }
         }
@@ -211,22 +231,28 @@ internal fun Entry(
     selected: Boolean,
     onClick: () -> Unit,
     onLongClick: (() -> Unit)? = null,
+    /** Carpeta donde se sueltan archivos arrastrados (A4.3); `null` = no acepta. */
+    dropDir: File? = null,
+    onDrop: (List<File>, File) -> Unit = { _, _ -> },
     below: (@Composable () -> Unit)? = null,
 ) {
     val t = TlacuacheTheme.tokens
+    var dropHere by remember { mutableStateOf(false) }
+    val lit = selected || dropHere
     Row(
         Modifier
             .fillMaxWidth()
             .heightIn(min = 48.dp)
             .padding(horizontal = 8.dp)
             .background(
-                if (selected) t.colors.selectionBg.color else t.colors.sidebarBg.color,
+                if (lit) t.colors.selectionBg.color else t.colors.sidebarBg.color,
                 MaterialTheme.shapes.small,
-            ).combinedClickable(role = Role.Button, onLongClick = onLongClick, onClick = onClick)
+            ).fileDropTarget(dropDir, onDrop) { dropHere = it }
+            .combinedClickable(role = Role.Button, onLongClick = onLongClick, onClick = onClick)
             .padding(horizontal = 8.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        val fg = if (selected) t.colors.selectionFg.color else t.colors.sidebarFg.color
+        val fg = if (lit) t.colors.selectionFg.color else t.colors.sidebarFg.color
         Icon(painterResource(icon), contentDescription = null, tint = fg, modifier = Modifier.size(20.dp))
         Column(Modifier.padding(start = 12.dp).weight(1f)) {
             Text(label, color = fg, maxLines = 1, overflow = TextOverflow.Ellipsis)

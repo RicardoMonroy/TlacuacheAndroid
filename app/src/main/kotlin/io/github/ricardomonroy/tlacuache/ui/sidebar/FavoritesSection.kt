@@ -120,7 +120,15 @@ private fun FavoriteEntry(
     val i = index.toUInt()
     val last = items.favorites[group].paths.lastIndex
     Box {
-        Entry(R.drawable.ic_folder, items.labelOf(dir), dir == items.current, { items.onOpen(dir) }, { menu = true })
+        Entry(
+            R.drawable.ic_folder,
+            items.labelOf(dir),
+            dir == items.current,
+            { items.onOpen(dir) },
+            { menu = true },
+            dropDir = dir,
+            onDrop = items.onDrop,
+        )
         DropdownMenu(menu, onDismissRequest = { menu = false }) {
             if (index > 0) {
                 DropdownMenuItem(

@@ -5,6 +5,7 @@ import android.content.ClipboardManager
 import androidx.activity.compose.BackHandler
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
@@ -115,6 +116,7 @@ fun PaneScreen(
     onTransfer: (OpKind, List<File>) -> Unit,
     onRemove: (OpKind, List<File>) -> Unit,
     onRun: (OpRequest) -> Unit,
+    onDrop: (List<File>, File) -> Unit,
     modifier: Modifier = Modifier,
     /** Letra del otro panel cuando solo se ve uno: la barra de la selección dice «Copiar a B». */
     otherPane: String? = null,
@@ -147,6 +149,7 @@ fun PaneScreen(
                     onTransfer,
                     onRemove,
                     onRun,
+                    onDrop,
                     otherPane,
                 ),
                 tabStrip = { TabStrip(tabs, pane) },
@@ -172,6 +175,8 @@ private class Chrome(
     val onRemove: (OpKind, List<File>) -> Unit,
     /** Renombrar y crear (A3.7). */
     val onRun: (OpRequest) -> Unit,
+    /** Soltar archivos arrastrados en una carpeta (A4.3); la ventana decide copiar o mover. */
+    val onDrop: (List<File>, File) -> Unit,
     val otherPane: String?,
 )
 
@@ -352,6 +357,17 @@ private fun TabScreen(
         }
     }
     val gestures = remember(tab) { ItemGestures(tab) { currentAct(it, FileAction.OPEN) } }
+    // Arrastrar (UI_SPEC §3): lo seleccionado si el elemento es parte de ello; si no, ese elemento. Con el dedo,
+    // la pulsación larga sobre algo sin seleccionar además lo selecciona (entra al modo selección): si se suelta
+    // sin mover, solo queda seleccionado.
+    val drag =
+        ItemDrag(ui.dir, files = { entry ->
+            when {
+                entry.name in ui.selected -> ui.selection.map { File(ui.dir, it.name) }
+                gestures.mouse -> listOf(File(ui.dir, entry.name))
+                else -> listOf(File(ui.dir, entry.name)).also { tab.toggle(entry.name) }
+            }
+        }, onDrop = chrome.onDrop)
     // Gesto atrás y Esc (UI_SPEC §3): la ruta en edición o el campo de filtro vacío cuentan como menú abierto.
     val backStep =
         BackStep.of(
@@ -629,7 +645,15 @@ private fun TabScreen(
                 }
             }
         }
-        Box(Modifier.weight(1f).fillMaxWidth()) {
+        // Soltar en la lista (fuera de una carpeta) deja los archivos en la carpeta de la pestaña.
+        var dropHere by remember { mutableStateOf(false) }
+        Box(
+            Modifier
+                .weight(1f)
+                .fillMaxWidth()
+                .fileDropTarget(ui.dir, chrome.onDrop) { dropHere = it }
+                .then(if (dropHere) Modifier.border(2.dp, t.colors.accent.color) else Modifier),
+        ) {
             when {
                 ui.failed -> {
                     Message(stringResource(R.string.pane_read_error)) { tab.reload() }
@@ -653,6 +677,7 @@ private fun TabScreen(
                                 activePane = chrome.active,
                                 isProtected = ui::isProtected,
                                 gestures = gestures,
+                                drag = drag,
                                 onAction = act,
                                 modifier = Modifier.fillMaxSize(),
                             )
@@ -664,6 +689,7 @@ private fun TabScreen(
                                 activePane = chrome.active,
                                 isProtected = ui::isProtected,
                                 gestures = gestures,
+                                drag = drag,
                                 onAction = act,
                                 modifier = Modifier.fillMaxSize(),
                             )

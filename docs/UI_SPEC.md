@@ -69,9 +69,9 @@ La app distingue el tipo de puntero de cada evento (`PointerType.Touch` / `Mouse
 | Gesto | Táctil | Ratón / touchpad |
 |---|---|---|
 | Abrir carpeta o archivo | Toque | Doble clic (Enter con teclado) |
-| Seleccionar | Pulsación larga entra en modo selección; luego toque alterna | Clic selecciona; Ctrl+clic alterna; Shift+clic rango |
-| Menú contextual | Botón ⋯ de la barra contextual, o pulsación larga sobre un elemento ya seleccionado | Clic derecho (en el puntero); tecla Menú o Shift+F10 |
-| Arrastrar | Pulsación larga + arrastrar (sobre selección) | Arrastrar directamente |
+| Seleccionar | Pulsación larga entra en modo selección (y empieza a arrastrar el elemento; si no se mueve, solo lo selecciona); luego toque alterna | Clic selecciona; Ctrl+clic alterna; Shift+clic rango |
+| Menú contextual | Botón ⋯ de la barra contextual (la pulsación larga sobre lo seleccionado es para arrastrar) | Clic derecho (en el puntero); tecla Menú o Shift+F10 |
+| Arrastrar | Pulsación larga + arrastrar (lo seleccionado, o ese elemento) | Arrastrar directamente |
 | Hover | — | Resaltado de fila (`hover_bg`) y tooltips en botones |
 | Subir/atrás | Gesto atrás del sistema; botón ↑ | Botones ‹ › ↑, botones laterales del ratón |
 
