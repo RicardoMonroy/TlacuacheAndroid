@@ -98,7 +98,7 @@ fun PaneScreen(
     dual: Boolean?,
     onToggleDual: () -> Unit,
     onAddFavorite: (File) -> Unit,
-    onTransfer: (OpKind, File) -> Unit,
+    onTransfer: (OpKind, List<File>) -> Unit,
     modifier: Modifier = Modifier,
     switcher: (@Composable () -> Unit)? = null,
 ) {
@@ -146,7 +146,7 @@ private class Chrome(
     val onActivate: () -> Unit,
     val onAddFavorite: (File) -> Unit,
     /** Copiar o mover al otro panel (A3.2; la franja central llega en A3.3). */
-    val onTransfer: (OpKind, File) -> Unit,
+    val onTransfer: (OpKind, List<File>) -> Unit,
 )
 
 /** Contenido de una pestaña. Relee al volver a primer plano y vigila su carpeta (ARCHITECTURE §6). */
@@ -186,13 +186,16 @@ private fun TabScreen(
     val noApp = stringResource(R.string.open_no_app)
     val openWithTitle = stringResource(R.string.action_open_with)
     val shareTitle = stringResource(R.string.action_share)
-    // Carpetas: se entra. Archivos: se abren o comparten con otras apps (A1.6).
+    // Carpetas: se entra. Archivos: se abren o comparten con otras apps (A1.6). Sobre un elemento seleccionado,
+    // copiar, mover y compartir actúan sobre toda la selección.
     val act: (FileEntry, FileAction) -> Unit = { entry, action ->
         val file = File(ui.dir, entry.name)
+        val targets = (if (entry.name in ui.selected) ui.selection else listOf(entry)).map { File(ui.dir, it.name) }
         val started =
             when {
                 action == FileAction.COPY_TO_OTHER || action == FileAction.MOVE_TO_OTHER -> {
-                    chrome.onTransfer(if (action == FileAction.COPY_TO_OTHER) OpKind.COPY else OpKind.MOVE, file)
+                    chrome.onTransfer(if (action == FileAction.COPY_TO_OTHER) OpKind.COPY else OpKind.MOVE, targets)
+                    tab.clearSelection()
                     true
                 }
 
@@ -215,18 +218,19 @@ private fun TabScreen(
                 }
 
                 else -> {
-                    FileIntents.share(context, listOf(file), shareTitle)
+                    FileIntents.share(context, targets.filter(File::isFile), shareTitle)
                 }
             }
         if (!started) scope.launch { snackbar.showSnackbar(noApp) }
     }
+    val currentAct by rememberUpdatedState(act)
+    val gestures = remember(tab) { ItemGestures(tab) { currentAct(it, FileAction.OPEN) } }
     // Gesto atrás y Esc (UI_SPEC §3): la ruta en edición o el campo de filtro vacío cuentan como menú abierto.
-    // La selección llega en A3.4.
     val backStep =
         BackStep.of(
             menuOpen = editingPath || (filterOpen && ui.query.isEmpty()),
             filterActive = ui.query.isNotEmpty(),
-            selectionActive = false,
+            selectionActive = ui.selecting,
             canGoBack = ui.canGoBack,
         )
     // Con dos paneles, el gesto atrás es del activo.
@@ -240,6 +244,10 @@ private fun TabScreen(
             BackStep.CLEAR_FILTER -> {
                 tab.setQuery("")
                 filterOpen = false
+            }
+
+            BackStep.CLEAR_SELECTION -> {
+                tab.clearSelection()
             }
 
             BackStep.HISTORY_BACK -> {
@@ -279,6 +287,17 @@ private fun TabScreen(
 
                     event.isCtrlPressed && event.key == Key.L -> {
                         editingPath = true
+                        true
+                    }
+
+                    event.isCtrlPressed && event.key == Key.A -> {
+                        tab.selectAll()
+                        true
+                    }
+
+                    // Esc limpia primero el filtro (abajo) y, sin filtro, la selección (UI_SPEC §3).
+                    event.key == Key.Escape && ui.query.isEmpty() && ui.selecting -> {
+                        tab.clearSelection()
                         true
                     }
 
@@ -337,60 +356,76 @@ private fun TabScreen(
                 }
             }
         }
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .background(t.colors.headerBg.color)
-                .padding(horizontal = 4.dp, vertical = if (shortHeight) 0.dp else 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            NavButton("‹", R.string.nav_back, ui.canGoBack) { tab.back() }
-            NavButton("›", R.string.nav_forward, ui.canGoForward) { tab.forward() }
-            NavButton("↑", R.string.nav_up, ui.canGoUp) { tab.up() }
-            PathBar(ui, tab, pathInput, editingPath, { editingPath = it }, Modifier.padding(start = 4.dp).weight(1f))
-            if (shortHeight) {
-                chrome.switcher?.invoke()
-                tabMenu()
-            }
-            val filterLabel = stringResource(R.string.filter_open)
-            IconButton({ filterOpen = true }, Modifier.semantics { contentDescription = filterLabel }) {
-                SearchGlyph(t.colors.headerFg.color)
-            }
-            Box {
-                NavButton("⋮", R.string.menu_more, enabled = true) { moreMenu = true }
-                DropdownMenu(expanded = moreMenu, onDismissRequest = { moreMenu = false }) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.menu_show_hidden)) },
-                        trailingIcon = { Checkbox(checked = ui.showHidden, onCheckedChange = null) },
-                        onClick = {
-                            moreMenu = false
-                            tab.toggleHidden()
-                        },
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.menu_icon_view)) },
-                        trailingIcon = { Checkbox(checked = ui.iconView, onCheckedChange = null) },
-                        onClick = {
-                            moreMenu = false
-                            tab.setIconView(!ui.iconView)
-                        },
-                    )
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.favorite_add)) },
-                        onClick = {
-                            moreMenu = false
-                            chrome.onAddFavorite(ui.dir)
-                        },
-                    )
-                    chrome.dual?.let { dual ->
+        // Con selección, la fila de navegación cede su sitio a la barra de la selección (UI_SPEC §4).
+        if (ui.selecting) {
+            SelectionBar(
+                ui,
+                tab,
+                Modifier.padding(vertical = if (shortHeight) 0.dp else 8.dp),
+            ) { act(ui.selection.first(), it) }
+        } else {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .background(t.colors.headerBg.color)
+                    .padding(horizontal = 4.dp, vertical = if (shortHeight) 0.dp else 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                NavButton("‹", R.string.nav_back, ui.canGoBack) { tab.back() }
+                NavButton("›", R.string.nav_forward, ui.canGoForward) { tab.forward() }
+                NavButton("↑", R.string.nav_up, ui.canGoUp) { tab.up() }
+                PathBar(
+                    ui,
+                    tab,
+                    pathInput,
+                    editingPath,
+                    { editingPath = it },
+                    Modifier.padding(start = 4.dp).weight(1f),
+                )
+                if (shortHeight) {
+                    chrome.switcher?.invoke()
+                    tabMenu()
+                }
+                val filterLabel = stringResource(R.string.filter_open)
+                IconButton({ filterOpen = true }, Modifier.semantics { contentDescription = filterLabel }) {
+                    SearchGlyph(t.colors.headerFg.color)
+                }
+                Box {
+                    NavButton("⋮", R.string.menu_more, enabled = true) { moreMenu = true }
+                    DropdownMenu(expanded = moreMenu, onDismissRequest = { moreMenu = false }) {
                         DropdownMenuItem(
-                            text = { Text(stringResource(R.string.menu_dual_pane)) },
-                            trailingIcon = { Checkbox(checked = dual, onCheckedChange = null) },
+                            text = { Text(stringResource(R.string.menu_show_hidden)) },
+                            trailingIcon = { Checkbox(checked = ui.showHidden, onCheckedChange = null) },
                             onClick = {
                                 moreMenu = false
-                                chrome.onToggleDual()
+                                tab.toggleHidden()
                             },
                         )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.menu_icon_view)) },
+                            trailingIcon = { Checkbox(checked = ui.iconView, onCheckedChange = null) },
+                            onClick = {
+                                moreMenu = false
+                                tab.setIconView(!ui.iconView)
+                            },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.favorite_add)) },
+                            onClick = {
+                                moreMenu = false
+                                chrome.onAddFavorite(ui.dir)
+                            },
+                        )
+                        chrome.dual?.let { dual ->
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.menu_dual_pane)) },
+                                trailingIcon = { Checkbox(checked = dual, onCheckedChange = null) },
+                                onClick = {
+                                    moreMenu = false
+                                    chrome.onToggleDual()
+                                },
+                            )
+                        }
                     }
                 }
             }
@@ -415,7 +450,9 @@ private fun TabScreen(
                             FileGrid(
                                 ui.dir,
                                 ui.visible,
-                                onOpen = { act(it, FileAction.OPEN) },
+                                selected = ui.selected,
+                                activePane = chrome.active,
+                                gestures = gestures,
                                 onAction = act,
                                 modifier = Modifier.fillMaxSize(),
                             )
@@ -423,7 +460,9 @@ private fun TabScreen(
                             FileList(
                                 ui.visible,
                                 ui.nowMs,
-                                onOpen = { act(it, FileAction.OPEN) },
+                                selected = ui.selected,
+                                activePane = chrome.active,
+                                gestures = gestures,
                                 onAction = act,
                                 modifier = Modifier.fillMaxSize(),
                             )

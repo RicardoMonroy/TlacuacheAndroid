@@ -130,6 +130,30 @@ class TabStateTest {
     }
 
     @Test
+    fun selectionTogglesRangesSurvivesReloadAndClearsOnNavigate() {
+        listOf("a.txt", "b.txt", "c.txt", "d.txt").forEach { File(root, it).writeText("x") }
+        tab.reload()
+        awaitUi { !it.loading && names() == listOf("DCIM", "a.txt", "b.txt", "c.txt", "d.txt") }
+
+        tab.toggle("b.txt")
+        tab.selectRange("d.txt")
+        assertEquals(setOf("b.txt", "c.txt", "d.txt"), ui.selected)
+        tab.toggle("c.txt")
+        assertEquals(listOf("b.txt", "d.txt"), ui.selection.map { it.name })
+        tab.selectOnly("a.txt")
+        assertEquals(setOf("a.txt"), ui.selected)
+
+        tab.selectAll()
+        File(root, "c.txt").delete()
+        tab.reload()
+        awaitUi { "c.txt" !in names() }
+        assertEquals(setOf("DCIM", "a.txt", "b.txt", "d.txt"), ui.selected)
+
+        tab.open(dir("DCIM"))
+        assertTrue(ui.selected.isEmpty())
+    }
+
+    @Test
     fun navigatingClearsFilterButKeepsHidden() {
         tab.toggleHidden()
         tab.setQuery("dc")

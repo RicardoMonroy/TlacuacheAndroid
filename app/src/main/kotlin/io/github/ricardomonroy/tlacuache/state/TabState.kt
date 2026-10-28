@@ -60,7 +60,17 @@ class TabState(
         val showHidden: Boolean = false,
         /** Vista de íconos (Ctrl+2) en vez de lista (Ctrl+1); se conserva al navegar. */
         val iconView: Boolean = false,
-    )
+        /** Nombres seleccionados (UI_SPEC §3); sobreviven a relecturas y se limpian al cambiar de carpeta. */
+        val selected: Set<String> = emptySet(),
+    ) {
+        val selecting: Boolean get() = selected.isNotEmpty()
+
+        /** Entradas seleccionadas, en el orden visible. */
+        val selection: List<FileEntry> get() = visible.filter { it.name in selected }
+    }
+
+    /** Punto fijo de Shift+clic: el último elemento seleccionado con clic o toque. */
+    private var anchor: String? = null
 
     // shortcut: orden fijo hasta los encabezados de orden (A2).
     private val sort = SortSpec(SortKey.NAME, descending = false)
@@ -132,6 +142,38 @@ class TabState(
         setQuery(next)
         return true
     }
+
+    /** Ctrl+clic, o un toque en modo selección. */
+    fun toggle(name: String) {
+        anchor = name
+        _ui.update { it.copy(selected = if (name in it.selected) it.selected - name else it.selected + name) }
+    }
+
+    /** Clic con ratón: solo este. */
+    fun selectOnly(name: String) {
+        anchor = name
+        _ui.update { it.copy(selected = setOf(name)) }
+    }
+
+    /** Shift+clic: del ancla a [name] en el orden visible. */
+    fun selectRange(name: String) {
+        _ui.update { ui ->
+            val names = ui.visible.map { it.name }
+            val from = names.indexOf(anchor ?: name)
+            val to = names.indexOf(name)
+            if (from < 0 || to < 0) {
+                ui.copy(selected = setOf(name))
+            } else {
+                ui.copy(selected = names.subList(minOf(from, to), maxOf(from, to) + 1).toSet())
+            }
+        }
+    }
+
+    /** Ctrl+A: todo lo visible (respeta el filtro). */
+    fun selectAll() = _ui.update { ui -> ui.copy(selected = ui.visible.mapTo(mutableSetOf()) { it.name }) }
+
+    /** Esc o el gesto atrás: sale del modo selección. */
+    fun clearSelection() = _ui.update { it.copy(selected = emptySet()) }
 
     fun setIconView(on: Boolean) = _ui.update { it.copy(iconView = on) }
 
@@ -238,7 +280,15 @@ class TabState(
         val current = read === entries
         _ui.update { now ->
             val sameFilter = now.query == ui.query && now.showHidden == ui.showHidden
-            if (current && sameFilter) now.copy(visible = visible) else now
+            // Lo seleccionado que ya no está (borrado, renombrado o filtrado) deja de estarlo.
+            val names = visible.mapTo(HashSet()) { it.name }
+            if (current &&
+                sameFilter
+            ) {
+                now.copy(visible = visible, selected = now.selected.filterTo(HashSet()) { it in names })
+            } else {
+                now
+            }
         }
     }
 

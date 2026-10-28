@@ -79,16 +79,17 @@ class WindowViewModel(
             .goTo(dir)
     }
 
-    /** Copia o mueve [file] a la carpeta actual del panel [target] (A3.2; la cola es de todo el proceso). */
+    /** Copia o mueve [files] a la carpeta actual del panel [target] (la cola es de todo el proceso). */
     fun transfer(
         kind: OpKind,
-        file: File,
+        files: List<File>,
         target: Int,
     ) {
+        if (files.isEmpty()) return
         val dest =
             panes[target]
                 .tabs.value.current.ui.value.dir
-        OpsRepository.enqueue(getApplication(), OpRequest(kind, listOf(file.path), dest.path, emptyList()))
+        OpsRepository.enqueue(getApplication(), OpRequest(kind, files.map { it.path }, dest.path, emptyList()))
     }
 
     /** Lugares de la barra lateral: carpetas estándar del almacenamiento interno (se buscan en IO). */

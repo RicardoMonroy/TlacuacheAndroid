@@ -14,6 +14,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -22,6 +23,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import io.github.ricardomonroy.tlacuache.R
+import io.github.ricardomonroy.tlacuache.ffi.summarize
 import io.github.ricardomonroy.tlacuache.state.TabState
 import io.github.ricardomonroy.tlacuache.storage.Volumes
 import io.github.ricardomonroy.tlacuache.ui.theme.TlacuacheTheme
@@ -58,8 +60,27 @@ fun StatusBar(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         val style = MaterialTheme.typography.bodySmall
+        // Con selección: «3 seleccionados · 12 MB» (`core::summary`; las carpetas no suman tamaño).
+        val selection = ui.selection
+        val summary = remember(selection) { if (selection.isEmpty()) null else summarize(selection) }
+        val items = pluralStringResource(R.plurals.pane_item_count, ui.visible.size, ui.visible.size)
+        val text =
+            summary?.let {
+                val count = pluralStringResource(R.plurals.selection_count, selection.size, selection.size)
+                val sized =
+                    if (it.files > 0u) {
+                        stringResource(
+                            R.string.status_selection,
+                            count,
+                            Formatter.formatShortFileSize(context, it.bytes.toLong()),
+                        )
+                    } else {
+                        count
+                    }
+                if (showFreeSpace) stringResource(R.string.status_selection, items, sized) else sized
+            } ?: items
         Text(
-            pluralStringResource(R.plurals.pane_item_count, ui.visible.size, ui.visible.size),
+            text,
             color = t.colors.fgMuted.color,
             style = style,
             maxLines = 1,

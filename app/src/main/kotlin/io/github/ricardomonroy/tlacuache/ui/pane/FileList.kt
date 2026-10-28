@@ -29,8 +29,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -79,14 +82,16 @@ private data class Columns(
 fun FileList(
     entries: List<FileEntry>,
     nowMs: Long,
-    onOpen: (FileEntry) -> Unit,
+    selected: Set<String>,
+    activePane: Boolean,
+    gestures: ItemGestures,
     onAction: (FileEntry, FileAction) -> Unit,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(),
 ) {
     BoxWithConstraints(modifier) {
         val columns = Columns.forWidth(maxWidth)
-        LazyColumn(Modifier.fillMaxSize(), rememberLazyListState(), contentPadding) {
+        LazyColumn(Modifier.fillMaxSize().then(gestures.trackPointer), rememberLazyListState(), contentPadding) {
             // El nombre es la identidad: releer la carpeta conserva desplazamiento y selección (ADR-A10).
             itemsIndexed(entries, key = { _, e -> e.name }) { index, entry ->
                 FileRow(
@@ -94,7 +99,8 @@ fun FileList(
                     nowMs,
                     columns,
                     alt = index % 2 == 1,
-                    onOpen = { onOpen(entry) },
+                    selection = selectionColors(entry.name in selected, activePane),
+                    gestures = gestures,
                     onAction = { onAction(entry, it) },
                 )
             }
@@ -108,15 +114,24 @@ private fun FileRow(
     nowMs: Long,
     columns: Columns,
     alt: Boolean,
-    onOpen: () -> Unit,
+    selection: SelectionColors?,
+    gestures: ItemGestures,
     onAction: (FileAction) -> Unit,
 ) {
     var menu by remember { mutableStateOf(false) }
     Box {
-        RowContent(entry, nowMs, columns, alt, onOpen, onLongPress = { menu = true })
+        RowContent(entry, nowMs, columns, alt, selection, Modifier.itemGestures(gestures, entry) { menu = true })
         FileMenu(entry, menu, { menu = false }, onAction)
     }
 }
+
+/** Acciones que tienen sentido para [entry] (carpeta o archivo). */
+internal fun FileAction.appliesTo(entry: FileEntry): Boolean =
+    when (this) {
+        FileAction.OPEN, FileAction.COPY_TO_OTHER, FileAction.MOVE_TO_OTHER -> true
+        FileAction.ADD_FAVORITE -> entry.isDir
+        FileAction.OPEN_WITH, FileAction.SHARE -> !entry.isDir
+    }
 
 /** Menú de pulsación larga de un elemento (lista y cuadrícula). */
 @Composable
@@ -129,13 +144,8 @@ internal fun FileMenu(
     // shortcut: menú mínimo por pulsación larga hasta la selección (A3.4) y el menú contextual completo (A3.11).
     DropdownMenu(expanded = expanded, onDismissRequest = onDismiss) {
         FileAction.entries
-            .filter {
-                when (it) {
-                    FileAction.OPEN, FileAction.COPY_TO_OTHER, FileAction.MOVE_TO_OTHER -> true
-                    FileAction.ADD_FAVORITE -> entry.isDir
-                    FileAction.OPEN_WITH, FileAction.SHARE -> !entry.isDir
-                }
-            }.forEach { action ->
+            .filter { it.appliesTo(entry) }
+            .forEach { action ->
                 DropdownMenuItem(
                     text = { Text(stringResource(action.label)) },
                     onClick = {
@@ -153,8 +163,8 @@ private fun RowContent(
     nowMs: Long,
     columns: Columns,
     alt: Boolean,
-    onOpen: () -> Unit,
-    onLongPress: () -> Unit,
+    selection: SelectionColors?,
+    modifier: Modifier,
 ) {
     val t = TlacuacheTheme.tokens
     val context = LocalContext.current
@@ -162,9 +172,9 @@ private fun RowContent(
         Modifier
             .fillMaxWidth()
             .height(RowHeight)
-            .background(if (alt) t.colors.paneAltRow.color else t.colors.paneBg.color)
-            // shortcut: un toque o Enter abre; selección y doble clic con ratón llegan en A3.4 y A4.2.
-            .combinedClickable(onClick = onOpen, onLongClick = onLongPress)
+            .background(selection?.background ?: if (alt) t.colors.paneAltRow.color else t.colors.paneBg.color)
+            .then(modifier)
+            .semantics { selected = selection != null }
             .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -172,7 +182,7 @@ private fun RowContent(
         FileIcon(rememberCategory(entry), 20.dp)
         Text(
             entry.name,
-            color = t.colors.fg.color,
+            color = selection?.content ?: t.colors.fg.color,
             maxLines = 1,
             overflow = TextOverflow.MiddleEllipsis,
             style = MaterialTheme.typography.bodyLarge,
@@ -205,6 +215,26 @@ private fun RowContent(
                 entry.modifiedMs?.let { AgeChip(remember(it, nowMs) { age(it, nowMs) }) }
             }
         }
+    }
+}
+
+/** Colores de un elemento seleccionado: acento en el panel activo, apagado en el otro (THEMES.md). */
+class SelectionColors(
+    val background: Color,
+    val content: Color,
+)
+
+@Composable
+fun selectionColors(
+    selected: Boolean,
+    activePane: Boolean,
+): SelectionColors? {
+    if (!selected) return null
+    val c = TlacuacheTheme.tokens.colors
+    return if (activePane) {
+        SelectionColors(c.selectionBg.color, c.selectionFg.color)
+    } else {
+        SelectionColors(c.selectionInactiveBg.color, c.fg.color)
     }
 }
 

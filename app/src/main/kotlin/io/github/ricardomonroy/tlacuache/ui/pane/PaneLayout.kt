@@ -131,14 +131,14 @@ fun PaneLayout(window: WindowViewModel) {
     val context = LocalContext.current
     // Las operaciones avisan por notificación (ADR-A09): se pide el permiso al encolar la primera.
     val notifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
-    val transfer: (OpKind, File, Int) -> Unit = { kind, file, target ->
+    val transfer: (OpKind, List<File>, Int) -> Unit = { kind, files, target ->
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
             PackageManager.PERMISSION_GRANTED
         ) {
             notifications.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
-        window.transfer(kind, file, target)
+        window.transfer(kind, files, target)
     }
     OpsConflictDialog()
     val snackbar = remember { SnackbarHostState() }
@@ -208,7 +208,7 @@ fun PaneLayout(window: WindowViewModel) {
                                 dual = true,
                                 onToggleDual = window::toggleDual,
                                 onAddFavorite = window::addFavorite,
-                                onTransfer = { kind, file -> transfer(kind, file, 1 - i) },
+                                onTransfer = { kind, files -> transfer(kind, files, 1 - i) },
                                 modifier = Modifier.weight(if (i == 0) shownSplit else 1 - shownSplit),
                             )
                         }
@@ -225,7 +225,7 @@ fun PaneLayout(window: WindowViewModel) {
                             dual = if (wide) false else null,
                             onToggleDual = window::toggleDual,
                             onAddFavorite = window::addFavorite,
-                            onTransfer = { kind, file -> transfer(kind, file, 1 - active) },
+                            onTransfer = { kind, files -> transfer(kind, files, 1 - active) },
                             modifier = Modifier.weight(1f),
                         )
                     }

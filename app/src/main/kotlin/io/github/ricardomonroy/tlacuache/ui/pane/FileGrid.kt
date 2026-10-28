@@ -1,7 +1,6 @@
 package io.github.ricardomonroy.tlacuache.ui.pane
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -23,6 +22,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -44,19 +45,21 @@ private val CellMinWidth = 104.dp
 fun FileGrid(
     dir: File,
     entries: List<FileEntry>,
-    onOpen: (FileEntry) -> Unit,
+    selected: Set<String>,
+    activePane: Boolean,
+    gestures: ItemGestures,
     onAction: (FileEntry, FileAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     LazyVerticalGrid(
         GridCells.Adaptive(CellMinWidth),
-        modifier,
+        modifier.then(gestures.trackPointer),
         rememberLazyGridState(),
         contentPadding = PaddingValues(4.dp),
     ) {
         // El nombre es la identidad, como en la lista (ADR-A10).
         items(entries, key = { it.name }) { entry ->
-            Cell(dir, entry, { onOpen(entry) }) { onAction(entry, it) }
+            Cell(dir, entry, selectionColors(entry.name in selected, activePane), gestures) { onAction(entry, it) }
         }
     }
 }
@@ -65,7 +68,8 @@ fun FileGrid(
 private fun Cell(
     dir: File,
     entry: FileEntry,
-    onOpen: () -> Unit,
+    selection: SelectionColors?,
+    gestures: ItemGestures,
     onAction: (FileAction) -> Unit,
 ) {
     val t = TlacuacheTheme.tokens
@@ -75,7 +79,9 @@ private fun Cell(
             Modifier
                 .fillMaxWidth()
                 .clip(MaterialTheme.shapes.small)
-                .combinedClickable(onClick = onOpen, onLongClick = { menu = true })
+                .background(selection?.background ?: t.colors.paneBg.color)
+                .itemGestures(gestures, entry) { menu = true }
+                .semantics { selected = selection != null }
                 .padding(4.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(4.dp),
@@ -92,7 +98,7 @@ private fun Cell(
             )
             Text(
                 entry.name,
-                color = t.colors.fg.color,
+                color = selection?.content ?: t.colors.fg.color,
                 style = MaterialTheme.typography.bodySmall,
                 textAlign = TextAlign.Center,
                 maxLines = 2,

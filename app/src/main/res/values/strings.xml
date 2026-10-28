@@ -110,6 +110,13 @@
     <string name="conflict_skip">Omitir</string>
     <string name="conflict_keep_both">Conservar ambos</string>
     <string name="conflict_apply_all">Aplicar a todos</string>
+    <string name="selection_close">Salir de la selección</string>
+    <string name="selection_all">Todo</string>
+    <plurals name="selection_count">
+        <item quantity="one">%d seleccionado</item>
+        <item quantity="other">%d seleccionados</item>
+    </plurals>
+    <string name="status_selection">%1$s · %2$s</string>
     <string name="menu_icon_view">Vista de íconos</string>
     <string name="menu_dual_pane">Doble panel</string>
     <string name="pane_a">Panel A</string>
