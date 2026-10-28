@@ -55,6 +55,8 @@ Formato: contexto → decisión → consecuencias. Añadir nuevas al final con n
 - **Consecuencias**: no se usa `listing_diff`; menos código. Cada resincronización relee la carpeta entera (igual que en Linux).
 - **Verificado (2026-10-27, Pixel 10, Android 17, almacenamiento interno)**: `FileObserver` sí recibe los cambios hechos por otros procesos a través de FUSE: `adb shell` (crear, renombrar, borrar) y una captura de pantalla guardada por SystemUI en `Pictures/Screenshots` aparecieron sin que la app pasara a segundo plano. Por eso no se implementa la revisión periódica. Pendiente: comprobarlo en SD/USB y en Android 10; si ahí no llegan eventos, añadir la revisión periódica solo para esos volúmenes.
 
+- **Nota (2026-10-28)**: en **T** (Android 11), con los dos paneles en la misma carpeta solo uno recibía los avisos: Android asocia los eventos de `FileObserver` a la ruta dentro del proceso y el último observador desplazaba al primero. `FolderWatcher` comparte ahora un observador por carpeta entre todos los que la vigilan.
+
 ## ADR-A11 — Configuración compartida en `config.toml`; lo propio de Android en `SharedPreferences`
 - **Contexto**: la configuración de Linux es un TOML gestionado por el core. Android añade preferencias que no existen en Linux (densidad, layout por clase de ancho).
 - **Decisión**: `filesDir/config.toml` con `core::config` para las claves comunes (incluidos favoritos y atajos). Las preferencias exclusivas de Android van en `SharedPreferences`, sin tocar el esquema del core.
