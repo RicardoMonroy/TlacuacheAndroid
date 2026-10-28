@@ -79,6 +79,7 @@ import io.github.ricardomonroy.tlacuache.state.BackStep
 import io.github.ricardomonroy.tlacuache.state.PaneState
 import io.github.ricardomonroy.tlacuache.state.PathInput
 import io.github.ricardomonroy.tlacuache.state.TabState
+import io.github.ricardomonroy.tlacuache.ui.ops.DeleteConfirmation
 import io.github.ricardomonroy.tlacuache.ui.theme.TlacuacheTheme
 import io.github.ricardomonroy.tlacuache.ui.theme.color
 import kotlinx.coroutines.launch
@@ -99,6 +100,7 @@ fun PaneScreen(
     onToggleDual: () -> Unit,
     onAddFavorite: (File) -> Unit,
     onTransfer: (OpKind, List<File>) -> Unit,
+    onRemove: (OpKind, List<File>) -> Unit,
     modifier: Modifier = Modifier,
     /** Letra del otro panel cuando solo se ve uno: la barra de la selección dice «Copiar a B». */
     otherPane: String? = null,
@@ -129,6 +131,7 @@ fun PaneScreen(
                     activate,
                     onAddFavorite,
                     onTransfer,
+                    onRemove,
                     otherPane,
                 ),
                 tabStrip = { TabStrip(tabs, pane) },
@@ -150,6 +153,8 @@ private class Chrome(
     val onAddFavorite: (File) -> Unit,
     /** Copiar o mover al otro panel (A3.2; la franja central llega en A3.3). */
     val onTransfer: (OpKind, List<File>) -> Unit,
+    /** Papelera o borrado permanente (este, ya confirmado). */
+    val onRemove: (OpKind, List<File>) -> Unit,
     val otherPane: String?,
 )
 
@@ -180,6 +185,8 @@ private fun TabScreen(
     // Campo del filtro abierto con el botón de buscar (táctil); con teclado físico basta con escribir.
     var filterOpen by rememberSaveable { mutableStateOf(false) }
     var moreMenu by remember { mutableStateOf(false) }
+    // Borrar permanentemente siempre pide confirmación (CLAUDE.md, regla 6).
+    var confirmDelete by remember { mutableStateOf<List<File>?>(null) }
     val context = LocalContext.current
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -196,6 +203,17 @@ private fun TabScreen(
                 action == FileAction.COPY_TO_OTHER || action == FileAction.MOVE_TO_OTHER -> {
                     chrome.onTransfer(if (action == FileAction.COPY_TO_OTHER) OpKind.COPY else OpKind.MOVE, targets)
                     tab.clearSelection()
+                    true
+                }
+
+                action == FileAction.TRASH -> {
+                    chrome.onRemove(OpKind.TRASH, targets)
+                    tab.clearSelection()
+                    true
+                }
+
+                action == FileAction.DELETE -> {
+                    confirmDelete = targets
                     true
                 }
 
@@ -224,6 +242,13 @@ private fun TabScreen(
         if (!started) scope.launch { snackbar.showSnackbar(noApp) }
     }
     val currentAct by rememberUpdatedState(act)
+    confirmDelete?.let { targets ->
+        DeleteConfirmation(targets.size, onDismiss = { confirmDelete = null }) {
+            chrome.onRemove(OpKind.DELETE, targets)
+            tab.clearSelection()
+            confirmDelete = null
+        }
+    }
     val gestures = remember(tab) { ItemGestures(tab) { currentAct(it, FileAction.OPEN) } }
     // Gesto atrás y Esc (UI_SPEC §3): la ruta en edición o el campo de filtro vacío cuentan como menú abierto.
     val backStep =
@@ -287,6 +312,15 @@ private fun TabScreen(
 
                     event.isCtrlPressed && event.key == Key.L -> {
                         editingPath = true
+                        true
+                    }
+
+                    // Supr: a la papelera; Shift+Supr: borrar para siempre, con confirmación (UI_SPEC §8).
+                    event.key == Key.Delete && ui.selecting -> {
+                        currentAct(
+                            ui.selection.first(),
+                            if (event.isShiftPressed) FileAction.DELETE else FileAction.TRASH,
+                        )
                         true
                     }
 

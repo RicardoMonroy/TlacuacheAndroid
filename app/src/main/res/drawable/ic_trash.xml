@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Simbólico de 16×16 (BRAND.md §5); se tiñe con el color del tema. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="16"
+    android:viewportHeight="16">
+    <path
+        android:fillColor="#FF000000"
+        android:fillType="evenOdd"
+        android:pathData="M5.5,1.5 H10.5 V3 H13.5 V4.5 H2.5 V3 H5.5 Z M3.5,5.5 H12.5 L11.75,13.6 A1,1 0 0 1 10.75,14.5 H5.25 A1,1 0 0 1 4.25,13.6 Z M6,7 H7.2 V12.5 H6 Z M8.8,7 H10 V12.5 H8.8 Z" />
+</vector>

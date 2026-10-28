@@ -69,6 +69,14 @@ object OpsRepository {
         publish()
     }
 
+    /** Deshacer (una vez) la operación [id]: se encola la inversa que calculó el core al terminar. */
+    fun undo(
+        context: Context,
+        id: ULong,
+    ) {
+        queue.takeUndo(id)?.let { enqueue(context, it) }
+    }
+
     fun isIdle() = queue.isIdle()
 
     private fun publish() {

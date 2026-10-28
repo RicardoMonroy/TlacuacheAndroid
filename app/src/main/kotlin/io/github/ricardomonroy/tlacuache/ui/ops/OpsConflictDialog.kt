@@ -96,6 +96,8 @@ fun finishedMessage(op: Operation): Int =
                 OpsRunner.Failure.PROTECTED -> R.string.ops_failed_protected
                 OpsRunner.Failure.READ_ONLY_DEST -> R.string.ops_failed_read_only
                 OpsRunner.Failure.SIZE_MISMATCH -> R.string.ops_failed_size
+                OpsRunner.Failure.NO_TRASH -> R.string.ops_failed_no_trash
+                OpsRunner.Failure.NOT_IN_TRASH -> R.string.ops_failed_not_in_trash
                 else -> R.string.ops_failed_io
             }
         }
@@ -105,6 +107,12 @@ fun finishedMessage(op: Operation): Int =
         }
 
         else -> {
-            if (op.kind == OpKind.MOVE) R.string.ops_done_move else R.string.ops_done_copy
+            when (op.kind) {
+                OpKind.MOVE -> R.string.ops_done_move
+                OpKind.TRASH -> R.string.ops_done_trash
+                OpKind.DELETE -> R.string.ops_done_delete
+                OpKind.UNTRASH -> R.string.ops_done_untrash
+                else -> R.string.ops_done_copy
+            }
         }
     }

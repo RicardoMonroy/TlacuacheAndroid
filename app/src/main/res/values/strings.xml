@@ -98,6 +98,27 @@
     </plurals>
     <string name="ops_done_copy">Copia terminada</string>
     <string name="ops_done_move">Movimiento terminado</string>
+    <string name="ops_done_trash">Enviado a la papelera</string>
+    <string name="ops_done_delete">Borrado permanentemente</string>
+    <string name="ops_done_untrash">Restaurado</string>
+    <string name="ops_undo">Deshacer</string>
+    <string name="ops_failed_no_trash">No se pudo enviar a la papelera (¿volumen de solo lectura?).</string>
+    <string name="ops_failed_not_in_trash">Ya no está en la papelera.</string>
+    <string name="action_trash">Enviar a la papelera</string>
+    <string name="action_delete">Borrar permanentemente</string>
+    <string name="delete_confirm_title">¿Borrar permanentemente?</string>
+    <plurals name="delete_confirm_text">
+        <item quantity="one">%d elemento se borrará para siempre. No se puede deshacer.</item>
+        <item quantity="other">%d elementos se borrarán para siempre. No se puede deshacer.</item>
+    </plurals>
+    <string name="delete_confirm">Borrar</string>
+    <string name="trash_title">Papelera</string>
+    <string name="trash_close">Cerrar la papelera</string>
+    <string name="trash_empty_action">Vaciar</string>
+    <string name="trash_empty_title">¿Vaciar la papelera?</string>
+    <string name="trash_is_empty">La papelera está vacía.</string>
+    <string name="trash_restore">Restaurar</string>
+    <string name="trash_from">De %1$s · %2$s</string>
     <string name="ops_cancelled">Operación cancelada</string>
     <string name="ops_failed_into_itself">No se puede copiar ni mover una carpeta dentro de sí misma.</string>
     <string name="ops_failed_protected">Esta carpeta del sistema no se puede mover.</string>

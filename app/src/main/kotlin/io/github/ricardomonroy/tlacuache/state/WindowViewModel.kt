@@ -16,6 +16,7 @@ import io.github.ricardomonroy.tlacuache.ffi.SessionTab
 import io.github.ricardomonroy.tlacuache.ops.OpsRepository
 import io.github.ricardomonroy.tlacuache.storage.FavoritesStore
 import io.github.ricardomonroy.tlacuache.storage.SessionStore
+import io.github.ricardomonroy.tlacuache.storage.TrashStore
 import io.github.ricardomonroy.tlacuache.storage.Volume
 import io.github.ricardomonroy.tlacuache.storage.Volumes
 import io.github.ricardomonroy.tlacuache.storage.fileObserverWatcher
@@ -90,6 +91,26 @@ class WindowViewModel(
             panes[target]
                 .tabs.value.current.ui.value.dir
         OpsRepository.enqueue(getApplication(), OpRequest(kind, files.map { it.path }, dest.path, emptyList()))
+    }
+
+    /** A la papelera o borrado permanente (ya confirmado) de [files]. */
+    fun remove(
+        kind: OpKind,
+        files: List<File>,
+    ) {
+        if (files.isNotEmpty()) {
+            OpsRepository.enqueue(
+                getApplication(),
+                OpRequest(
+                    kind,
+                    files.map {
+                        it.path
+                    },
+                    null,
+                    emptyList(),
+                ),
+            )
+        }
     }
 
     /** Lugares de la barra lateral: carpetas estándar del almacenamiento interno (se buscan en IO). */
@@ -168,6 +189,8 @@ class WindowViewModel(
 
     init {
         viewModelScope.launch { favoritesStore.load() }
+        // Purga al arrancar: lo que lleva más de 30 días en la papelera (ADR-A05).
+        viewModelScope.launch(Dispatchers.IO) { TrashStore({ Volumes.roots(app) }).purge() }
         viewModelScope.launch {
             // Una ventana abierta en una carpeta concreta (A4.5) no restaura la sesión.
             if (savedState.get<String>(EXTRA_PATH) == null) sessionStore.load()?.let(::restore)

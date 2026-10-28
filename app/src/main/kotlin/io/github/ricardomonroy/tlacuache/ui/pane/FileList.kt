@@ -62,6 +62,8 @@ enum class FileAction(
     // shortcut: en el menú hasta la franja central y la barra con destino (A3.3).
     COPY_TO_OTHER(R.string.action_copy_to_other),
     MOVE_TO_OTHER(R.string.action_move_to_other),
+    TRASH(R.string.action_trash),
+    DELETE(R.string.action_delete),
 }
 
 // shortcut: filas de 48 dp (táctil); la densidad según el puntero llega en A4.2.
@@ -128,7 +130,7 @@ private fun FileRow(
 /** Acciones que tienen sentido para [entry] (carpeta o archivo). */
 internal fun FileAction.appliesTo(entry: FileEntry): Boolean =
     when (this) {
-        FileAction.OPEN, FileAction.COPY_TO_OTHER, FileAction.MOVE_TO_OTHER -> true
+        FileAction.OPEN, FileAction.COPY_TO_OTHER, FileAction.MOVE_TO_OTHER, FileAction.TRASH, FileAction.DELETE -> true
         FileAction.ADD_FAVORITE -> entry.isDir
         FileAction.OPEN_WITH, FileAction.SHARE -> !entry.isDir
     }

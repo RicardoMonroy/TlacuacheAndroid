@@ -63,6 +63,8 @@ class SidebarItems(
     val onOpen: (File) -> Unit,
     /** Cambia los favoritos con las reglas del core y los guarda; el resultado llega en el hilo principal. */
     val editFavorites: (change: (Favorites) -> Unit, onResult: (FavoritesStore.Result) -> Unit) -> Unit,
+    /** Abre la vista de la papelera (todos los volúmenes). */
+    val onTrash: () -> Unit,
 ) {
     /** Rótulo de una carpeta: el nombre del volumen si es su raíz, si no el de la carpeta. */
     fun labelOf(dir: File): String = volumes.firstOrNull { it.root == dir }?.name ?: dir.name
@@ -100,6 +102,7 @@ fun Sidebar(
                 VolumeUsage(volume)
             }
         }
+        Entry(R.drawable.ic_trash, stringResource(R.string.trash_title), false, items.onTrash)
     }
 }
 
@@ -152,6 +155,13 @@ fun SidebarRail(
             }
         }
         items.volumes.forEach { item(it.kind.icon, it.name, it.root) }
+        NavigationRailItem(
+            selected = false,
+            onClick = items.onTrash,
+            icon = { Icon(painterResource(R.drawable.ic_trash), contentDescription = null) },
+            label = { Text(stringResource(R.string.trash_title), maxLines = 1) },
+            colors = colors,
+        )
     }
 }
 

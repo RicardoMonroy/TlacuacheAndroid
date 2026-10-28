@@ -190,6 +190,34 @@ class OpsRunnerTest {
         assertTrue(File(dst, "DCIM").isDirectory)
     }
 
+    @Test
+    fun trashUndoAndPermanentDelete() {
+        val a = file(src, "a.txt", 3)
+        val album = File(src, "Álbum").apply { mkdir() }
+        file(album, "b.jpg", 4)
+        val journal = run(op(OpKind.TRASH, a, album))
+        assertFalse(a.exists())
+        assertFalse(album.exists())
+        assertEquals(listOf(a.absolutePath, album.absolutePath), journal.trashed)
+        assertTrue(File(root, ".Tlacuache/Papelera/files/Álbum/b.jpg").exists())
+
+        // Deshacer: las rutas originales vuelven a su sitio; si está ocupado, se pregunta.
+        file(src, "a.txt", 9)
+        answer = OpsRunner.Decision(ConflictAction.KEEP_BOTH, applyToAll = false)
+        run(op(OpKind.UNTRASH, a, album))
+        assertEquals(9L, a.length())
+        assertEquals(3L, File(src, "a (2).txt").length())
+        assertEquals(4L, File(album, "b.jpg").length())
+
+        // Borrar para siempre un elemento de la papelera quita también su .trashinfo.
+        run(op(OpKind.TRASH, a))
+        val inTrash = File(root, ".Tlacuache/Papelera/files/a.txt")
+        run(op(OpKind.DELETE, inTrash))
+        assertFalse(inTrash.exists())
+        assertFalse(File(root, ".Tlacuache/Papelera/info/a.txt.trashinfo").exists())
+        expectFailure(OpsRunner.Failure.PROTECTED) { run(op(OpKind.TRASH, File(root, "DCIM").apply { mkdir() })) }
+    }
+
     private fun expectFailure(
         failure: OpsRunner.Failure,
         block: () -> Unit,

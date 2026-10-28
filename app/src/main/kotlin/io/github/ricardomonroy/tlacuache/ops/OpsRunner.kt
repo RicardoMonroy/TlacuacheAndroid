@@ -10,6 +10,7 @@ import io.github.ricardomonroy.tlacuache.ffi.Progress
 import io.github.ricardomonroy.tlacuache.ffi.nextFreeName
 import io.github.ricardomonroy.tlacuache.ffi.replaceAllowed
 import io.github.ricardomonroy.tlacuache.storage.Protected
+import io.github.ricardomonroy.tlacuache.storage.TrashStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -35,6 +36,8 @@ class OpsRunner(
     private val askConflict: suspend (Conflict) -> Decision,
     /** Renombrado atómico; en las pruebas se sustituye para simular otro volumen. */
     private val atomicMove: (Path, Path) -> Unit = { from, to -> Files.move(from, to, StandardCopyOption.ATOMIC_MOVE) },
+    /** Papelera propia (ADR-A05). */
+    private val trash: TrashStore = TrashStore(volumeRoots),
 ) {
     /** El destino [existing] ya existe al copiar o mover [source]. */
     class Conflict(
@@ -49,7 +52,16 @@ class OpsRunner(
     )
 
     /** Por qué no se pudo; la UI lo traduce. */
-    enum class Failure { INTO_ITSELF, PROTECTED, READ_ONLY_DEST, SIZE_MISMATCH, UNSUPPORTED, IO }
+    enum class Failure {
+        INTO_ITSELF,
+        PROTECTED,
+        READ_ONLY_DEST,
+        SIZE_MISMATCH,
+        NO_TRASH,
+        NOT_IN_TRASH,
+        UNSUPPORTED,
+        IO,
+    }
 
     class FailedException(
         val failure: Failure,
@@ -70,11 +82,13 @@ class OpsRunner(
         changed: (File) -> Unit,
     ): Journal =
         withContext(Dispatchers.IO) {
-            val dest = op.dest?.let(::File) ?: throw FailedException(Failure.UNSUPPORTED)
-            Run(op.sources.map(::File), dest, cancelled, progress, changed).run {
+            Run(op.sources.map(::File), op.dest?.let(::File), cancelled, progress, changed).run {
                 when (op.kind) {
                     OpKind.COPY -> copyAll()
                     OpKind.MOVE -> moveAll()
+                    OpKind.TRASH -> trashAll()
+                    OpKind.DELETE -> deleteAll()
+                    OpKind.UNTRASH -> untrashAll()
                     else -> throw FailedException(Failure.UNSUPPORTED)
                 }
             }
@@ -82,7 +96,7 @@ class OpsRunner(
 
     private inner class Run(
         val sources: List<File>,
-        val dest: File,
+        val target: File?,
         val cancelled: () -> Boolean,
         val report: (Progress) -> Unit,
         val changed: (File) -> Unit,
@@ -96,7 +110,78 @@ class OpsRunner(
         val bytesTotal = sources.sumOf(::sizeOf)
         val filesTotal = sources.sumOf(::countOf)
 
-        fun journal() = Journal(pairs, merged, emptyList(), emptyList())
+        val trashed = mutableListOf<String>()
+        val dest: File get() = target ?: throw FailedException(Failure.UNSUPPORTED)
+
+        fun journal() = Journal(pairs, merged, trashed, emptyList())
+
+        /** A la papelera de su volumen (renombrado instantáneo); deshacer los devuelve. */
+        fun trashAll(): Journal {
+            for (src in sources) {
+                checkCancelled()
+                if (Protected.cannotRemove(src, roots)) throw FailedException(Failure.PROTECTED, src.path)
+                try {
+                    trash.trash(src)
+                } catch (e: IOException) {
+                    throw FailedException(Failure.NO_TRASH, src.path, e)
+                }
+                trashed += src.absolutePath
+                done(src)
+            }
+            return journal()
+        }
+
+        /** Borrado permanente (la UI ya pidió confirmación); también vacía elementos de la papelera. */
+        fun deleteAll(): Journal {
+            for (src in sources) {
+                checkCancelled()
+                if (Protected.cannotRemove(src, roots)) throw FailedException(Failure.PROTECTED, src.path)
+                val size = sizeOf(src)
+                val count = countOf(src)
+                if (!src.deleteRecursively()) throw FailedException(Failure.IO, src.path)
+                trash.forget(src)
+                bytesDone += size
+                filesDone += count
+                publish(src.name)
+                changed(src)
+            }
+            return journal()
+        }
+
+        /**
+         * Saca de la papelera: cada origen es un elemento de la papelera o la ruta original de lo último que se
+         * envió desde ahí (deshacer). Si su sitio está ocupado, se pregunta como en un conflicto.
+         */
+        suspend fun untrashAll(): Journal {
+            for (src in sources) {
+                checkCancelled()
+                val item = trash.find(src) ?: throw FailedException(Failure.NOT_IN_TRASH, src.path)
+                val restored = resolveConflict(item.file, item.originalPath) ?: continue
+                if (item.file.isDirectory && restored.isDirectory) {
+                    // «Combinar»: el contenido pasa a la carpeta que ya existe.
+                    item.file
+                        .listFiles()
+                        .orEmpty()
+                        .forEach { moveInto(it, restored) }
+                    trash.delete(item)
+                } else {
+                    try {
+                        trash.restore(item, restored)
+                    } catch (e: IOException) {
+                        throw FailedException(Failure.IO, src.path, e)
+                    }
+                }
+                pairs += MovedItem(item.file.path, restored.path)
+                done(restored)
+            }
+            return journal()
+        }
+
+        fun done(file: File) {
+            filesDone++
+            publish(file.name)
+            changed(file)
+        }
 
         suspend fun copyAll(): Journal {
             checkDest()

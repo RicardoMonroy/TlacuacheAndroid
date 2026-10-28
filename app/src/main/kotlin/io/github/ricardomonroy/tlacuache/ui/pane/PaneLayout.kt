@@ -33,16 +33,20 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -85,6 +89,7 @@ import io.github.ricardomonroy.tlacuache.ui.sidebar.SidebarRail
 import io.github.ricardomonroy.tlacuache.ui.sidebar.SidebarWidth
 import io.github.ricardomonroy.tlacuache.ui.theme.TlacuacheTheme
 import io.github.ricardomonroy.tlacuache.ui.theme.color
+import io.github.ricardomonroy.tlacuache.ui.trash.TrashScreen
 import kotlinx.coroutines.launch
 import java.io.File
 
@@ -125,8 +130,12 @@ fun PaneLayout(window: WindowViewModel) {
     val toggleDrawer: () -> Unit = { scope.launch { if (drawer.isOpen) drawer.close() else drawer.open() } }
     // El gesto atrás cierra el cajón antes que nada; mientras está abierto ningún panel lo atiende.
     BackHandler(drawer.isOpen) { scope.launch { drawer.close() } }
+    var showTrash by rememberSaveable { mutableStateOf(false) }
     val items =
-        sidebarItems(window, active) { dir -> window.openInActive(dir).also { scope.launch { drawer.close() } } }
+        sidebarItems(window, active, onTrash = {
+            showTrash = true
+            scope.launch { drawer.close() }
+        }) { dir -> window.openInActive(dir).also { scope.launch { drawer.close() } } }
     val t = TlacuacheTheme.tokens
     var rowWidth by remember { mutableFloatStateOf(1f) }
     // Cada panel conserva sitio para botones y ruta; en un teléfono horizontal el divisor apenas se mueve.
@@ -135,15 +144,23 @@ fun PaneLayout(window: WindowViewModel) {
     val context = LocalContext.current
     // Las operaciones avisan por notificación (ADR-A09): se pide el permiso al encolar la primera.
     val notifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
-    val transfer: (OpKind, List<File>, Int) -> Unit = { kind, files, target ->
+    val askNotifications = {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
             PackageManager.PERMISSION_GRANTED
         ) {
             notifications.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
+    }
+    val transfer: (OpKind, List<File>, Int) -> Unit = { kind, files, target ->
+        askNotifications()
         window.transfer(kind, files, target)
     }
+    val remove: (OpKind, List<File>) -> Unit = { kind, files ->
+        askNotifications()
+        window.remove(kind, files)
+    }
+    if (showTrash) TrashScreen(onClose = { showTrash = false }, run = remove)
     // Franja central y F5/F6: la selección del panel activo al otro (UI_SPEC §4).
     val activeTabs by window.panes[active].tabs.collectAsStateWithLifecycle()
     val activeUi by activeTabs.current.ui.collectAsStateWithLifecycle()
@@ -157,7 +174,16 @@ fun PaneLayout(window: WindowViewModel) {
     val resources = LocalResources.current
     LaunchedEffect(window) { window.notices.collect { snackbar.showSnackbar(resources.getString(it)) } }
     LaunchedEffect(Unit) {
-        OpsRepository.finished.collect { snackbar.showSnackbar(resources.getString(finishedMessage(it))) }
+        // Con Deshacer si el core supo cómo revertirla (UI_SPEC §4).
+        OpsRepository.finished.collect { op ->
+            val result =
+                snackbar.showSnackbar(
+                    resources.getString(finishedMessage(op)),
+                    actionLabel = if (op.canUndo) resources.getString(R.string.ops_undo) else null,
+                    duration = SnackbarDuration.Short,
+                )
+            if (result == SnackbarResult.ActionPerformed) OpsRepository.undo(context, op.id)
+        }
     }
     Box(Modifier.fillMaxSize()) {
         ModalNavigationDrawer(
@@ -225,6 +251,7 @@ fun PaneLayout(window: WindowViewModel) {
                                 onToggleDual = window::toggleDual,
                                 onAddFavorite = window::addFavorite,
                                 onTransfer = { kind, files -> transfer(kind, files, 1 - i) },
+                                onRemove = remove,
                                 modifier = Modifier.weight(if (i == 0) shownSplit else 1 - shownSplit),
                             )
                         }
@@ -242,6 +269,7 @@ fun PaneLayout(window: WindowViewModel) {
                             onToggleDual = window::toggleDual,
                             onAddFavorite = window::addFavorite,
                             onTransfer = { kind, files -> transfer(kind, files, 1 - active) },
+                            onRemove = remove,
                             otherPane = if (active == 0) "B" else "A",
                             modifier = Modifier.weight(1f),
                         )
@@ -258,6 +286,7 @@ fun PaneLayout(window: WindowViewModel) {
 private fun sidebarItems(
     window: WindowViewModel,
     active: Int,
+    onTrash: () -> Unit,
     onOpen: (File) -> Unit,
 ): SidebarItems {
     val places by window.places.collectAsStateWithLifecycle()
@@ -265,7 +294,7 @@ private fun sidebarItems(
     val favorites by window.favorites.collectAsStateWithLifecycle()
     val tabs by window.panes[active].tabs.collectAsStateWithLifecycle()
     val ui by tabs.current.ui.collectAsStateWithLifecycle()
-    return SidebarItems(places, volumes, favorites, ui.dir, onOpen, window::editFavorites)
+    return SidebarItems(places, volumes, favorites, ui.dir, onOpen, window::editFavorites, onTrash)
 }
 
 /** ☰ en la cabecera del panel (compacta): abre el cajón con la barra lateral. */

@@ -33,7 +33,7 @@ import io.github.ricardomonroy.tlacuache.ui.theme.color
  * Barra de la selección (UI_SPEC §4): ✕ sale del modo selección, el número de seleccionados, «Todo» y ⋯ con
  * las acciones que valen para lo seleccionado.
  *
- * shortcut: Copiar/Mover a B como botones, Renombrar y Papelera llegan con A3.3, A3.6 y A3.5.
+ * shortcut: Renombrar llega con A3.6.
  */
 @Composable
 fun SelectionBar(
@@ -53,6 +53,8 @@ fun SelectionBar(
             } else {
                 action == FileAction.COPY_TO_OTHER ||
                     action == FileAction.MOVE_TO_OTHER ||
+                    action == FileAction.TRASH ||
+                    action == FileAction.DELETE ||
                     (action == FileAction.SHARE && selection.any { !it.isDir })
             }
         }
@@ -99,7 +101,6 @@ fun SelectionBar(
  * Barra inferior de la selección con un solo panel visible (UI_SPEC §4): «Copiar a B», «Mover a B» y
  * Compartir si hay archivos.
  *
- * shortcut: Papelera llega con A3.5.
  */
 @Composable
 fun SelectionActions(
@@ -120,5 +121,6 @@ fun SelectionActions(
         if (ui.selection.any { !it.isDir }) {
             TextButton({ onAction(FileAction.SHARE) }) { Text(stringResource(R.string.action_share)) }
         }
+        TextButton({ onAction(FileAction.TRASH) }) { Text(stringResource(R.string.trash_title)) }
     }
 }
