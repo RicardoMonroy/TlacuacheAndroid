@@ -112,6 +112,17 @@
         <item quantity="one">%d carpeta</item>
         <item quantity="other">%d carpetas</item>
     </plurals>
+    <string name="shortcuts_navigation">Navegación</string>
+    <string name="shortcuts_files">Archivos</string>
+    <string name="shortcuts_window">Paneles y pestañas</string>
+    <string name="shortcut_edit_path">Escribir la ruta</string>
+    <string name="shortcut_reload">Recargar</string>
+    <string name="shortcut_list_view">Vista de lista</string>
+    <string name="shortcut_select_all">Seleccionar todo</string>
+    <string name="shortcut_other_pane">Cambiar de panel</string>
+    <string name="shortcut_sidebar">Barra lateral</string>
+    <string name="shortcut_next_tab">Pestaña siguiente</string>
+    <string name="shortcut_previous_tab">Pestaña anterior</string>
     <string name="action_copy_to_other">Copiar al otro panel</string>
     <string name="action_move_to_other">Mover al otro panel</string>
     <string name="ops_channel">Operaciones de archivos</string>

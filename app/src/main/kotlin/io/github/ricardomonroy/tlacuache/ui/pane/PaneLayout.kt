@@ -83,6 +83,7 @@ import io.github.ricardomonroy.tlacuache.ffi.OpRequest
 import io.github.ricardomonroy.tlacuache.ops.Clipboard
 import io.github.ricardomonroy.tlacuache.ops.OpsRepository
 import io.github.ricardomonroy.tlacuache.state.WindowViewModel
+import io.github.ricardomonroy.tlacuache.ui.Shortcut
 import io.github.ricardomonroy.tlacuache.ui.ops.ClipboardPill
 import io.github.ricardomonroy.tlacuache.ui.ops.OpsConflictDialog
 import io.github.ricardomonroy.tlacuache.ui.ops.OpsIndicator
@@ -227,18 +228,19 @@ fun PaneLayout(window: WindowViewModel) {
                     // En horizontal, la cámara frontal queda a un lado: nada debajo de ella.
                     .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))
                     .onKeyEvent { event ->
-                        if (event.type == KeyEventType.KeyDown && event.isCtrlPressed && event.key == Key.Z) {
-                            OpsRepository.undoLast(context)
-                            true
-                        } else if (event.type == KeyEventType.KeyDown && event.isCtrlPressed && event.key == Key.V) {
-                            paste()
-                            true
-                        } else if (event.type == KeyEventType.KeyDown && event.key == Key.F9) {
-                            if (permanentFits) window.toggleSidebar() else toggleDrawer()
-                            true
-                        } else {
-                            handleWindowKey(event, window, wide, transferSelection)
+                        // Atajos de la ventana: lo que el panel no atendió (UI_SPEC §8).
+                        if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                        when (Shortcut.of(event)) {
+                            Shortcut.OTHER_PANE -> window.activateOther()
+                            Shortcut.TOGGLE_DUAL -> if (wide) window.toggleDual() else window.activateOther()
+                            Shortcut.SIDEBAR -> if (permanentFits) window.toggleSidebar() else toggleDrawer()
+                            Shortcut.COPY_TO_OTHER -> transferSelection(OpKind.COPY)
+                            Shortcut.MOVE_TO_OTHER -> transferSelection(OpKind.MOVE)
+                            Shortcut.PASTE -> paste()
+                            Shortcut.UNDO -> OpsRepository.undoLast(context)
+                            else -> return@onKeyEvent false
                         }
+                        true
                     },
             ) {
                 when {
@@ -343,25 +345,6 @@ private fun DrawerButton(onClick: () -> Unit) {
     IconButton(onClick) {
         Icon(painterResource(R.drawable.ic_menu), stringResource(R.string.sidebar_open), tint = t.colors.headerFg.color)
     }
-}
-
-/** Tab cambia de panel; F3 alterna 1/2 paneles, o A/B en compacta; F5/F6 copian/mueven al otro (UI_SPEC §8). */
-private fun handleWindowKey(
-    event: KeyEvent,
-    window: WindowViewModel,
-    wide: Boolean,
-    transferSelection: (OpKind) -> Unit,
-): Boolean {
-    if (event.type != KeyEventType.KeyDown) return false
-    if (event.isCtrlPressed || event.isAltPressed || event.isMetaPressed || event.isShiftPressed) return false
-    when (event.key) {
-        Key.Tab -> window.activateOther()
-        Key.F3 -> if (wide) window.toggleDual() else window.activateOther()
-        Key.F5 -> transferSelection(OpKind.COPY)
-        Key.F6 -> transferSelection(OpKind.MOVE)
-        else -> return false
-    }
-    return true
 }
 
 /**

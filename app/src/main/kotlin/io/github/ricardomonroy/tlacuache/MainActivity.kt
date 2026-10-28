@@ -2,6 +2,8 @@ package io.github.ricardomonroy.tlacuache
 
 import android.graphics.Color.TRANSPARENT
 import android.os.Bundle
+import android.view.KeyboardShortcutGroup
+import android.view.Menu
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
@@ -23,6 +25,7 @@ import io.github.ricardomonroy.tlacuache.ffi.defaultThemeId
 import io.github.ricardomonroy.tlacuache.ops.OpsRepository
 import io.github.ricardomonroy.tlacuache.state.WindowViewModel
 import io.github.ricardomonroy.tlacuache.storage.StorageAccess
+import io.github.ricardomonroy.tlacuache.ui.Shortcut
 import io.github.ricardomonroy.tlacuache.ui.pane.PaneLayout
 import io.github.ricardomonroy.tlacuache.ui.pane.thumbnailLoader
 import io.github.ricardomonroy.tlacuache.ui.theme.TlacuacheTheme
@@ -32,6 +35,15 @@ class MainActivity : ComponentActivity() {
     override fun onStart() {
         super.onStart()
         OpsRepository.windowShown()
+    }
+
+    /** Meta+/ (y el menú de atajos del sistema): la misma tabla con la que se despachan. */
+    override fun onProvideKeyboardShortcuts(
+        data: MutableList<KeyboardShortcutGroup>,
+        menu: Menu?,
+        deviceId: Int,
+    ) {
+        data += Shortcut.groups(this)
     }
 
     override fun onStop() {

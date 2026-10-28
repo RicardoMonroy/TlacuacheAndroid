@@ -70,6 +70,7 @@ Trabajar en orden. Cada tarea = un commit. Marcar `[x]` al cumplir el criterio d
 
 ## Hito A4 — Modo escritorio y teclado
 - [ ] **A4.1 Despacho de teclado**: tabla de UI_SPEC §8 desde `core::keymap` + `[keys]`, prioridad del foco de texto, `onProvideKeyboardShortcuts`. CA: todos los atajos de la tabla funcionan en **PE**; Meta+/ los lista.
+  - Avance (2026-10-28): tabla única `Shortcut` (UI_SPEC §8) que despachan el panel y la ventana y que da la lista de Meta+/ (`onProvideKeyboardShortcuts`); sin `[keys]` (ADR-A15). Prueba JVM: ninguna combinación repetida, modificadores exactos. En **T**, solo teclas simuladas sin modificador (Android 11 no simula Ctrl por adb): F3, F9, F7, Retroceso y Tab. Falta **PE** con teclado real y ver la lista de Meta+/.
 - [ ] **A4.2 Ratón**: clic selecciona y doble clic abre, hover, cursores, tooltips con atajo, botones laterales atrás/adelante, densidad automática. CA: en **PE** las filas pasan a 32 dp al usar el ratón y a 48 dp al tocar.
 - [ ] **A4.3 Arrastrar y soltar interno**: entre paneles, a carpetas, a favoritos y volúmenes; copiar/mover según volumen con Ctrl/Shift. CA: en **PE** y en **T**.
 - [ ] **A4.4 Arrastre con otras apps**: hacia otras apps (URIs del provider) y desde ellas (copia por `ContentResolver`). CA: arrastrar una foto a Gmail y un adjunto de otra app a una carpeta en **PE**.

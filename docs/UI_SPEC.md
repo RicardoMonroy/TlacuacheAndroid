@@ -111,7 +111,7 @@ La app distingue el tipo de puntero de cada evento (`PointerType.Touch` / `Mouse
 - Se actualiza con debounce de 120 ms (`core::preview::DEBOUNCE_MS`) y cancela la petición anterior.
 - Qué se muestra (`core::preview::target`): un elemento → su vista previa; varios → resumen; ninguno → la carpeta actual.
 
-## 8. Atajos de teclado (con teclado físico; remapeables en config)
+## 8. Atajos de teclado (con teclado físico; remapear con `[keys]` llega cuando el core lo permita, ADR-A15)
 
 | Acción | Atajo |
 |---|---|

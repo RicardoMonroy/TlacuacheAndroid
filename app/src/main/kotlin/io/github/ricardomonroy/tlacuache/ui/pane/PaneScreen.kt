@@ -84,6 +84,7 @@ import io.github.ricardomonroy.tlacuache.state.BackStep
 import io.github.ricardomonroy.tlacuache.state.PaneState
 import io.github.ricardomonroy.tlacuache.state.PathInput
 import io.github.ricardomonroy.tlacuache.state.TabState
+import io.github.ricardomonroy.tlacuache.ui.Shortcut
 import io.github.ricardomonroy.tlacuache.ui.ops.DeleteConfirmation
 import io.github.ricardomonroy.tlacuache.ui.ops.NameDialog
 import io.github.ricardomonroy.tlacuache.ui.theme.TlacuacheTheme
@@ -144,7 +145,7 @@ fun PaneScreen(
                 ),
                 tabStrip = { TabStrip(tabs, pane) },
                 tabMenu = { TabMenuButton(tabs, pane) },
-                paneKeys = { handleTabKey(it, pane) },
+                paneKeys = { handleTabShortcut(it, pane) },
             )
         }
     }
@@ -176,7 +177,7 @@ private fun TabScreen(
     chrome: Chrome,
     tabStrip: @Composable () -> Unit,
     tabMenu: @Composable () -> Unit,
-    paneKeys: (KeyEvent) -> Boolean,
+    paneKeys: (Shortcut) -> Boolean,
 ) {
     // Con poca altura (teléfono en horizontal) el encabezado se reduce a una fila: el contenido manda.
     val window = windowSize()
@@ -377,6 +378,66 @@ private fun TabScreen(
             else -> {}
         }
     }
+
+    /** Atajos de la pestaña (UI_SPEC §8); `false` si no aplica aquí y debe seguir a la ventana. */
+    fun runShortcut(shortcut: Shortcut): Boolean {
+        val single = ui.selection.singleOrNull()
+        when (shortcut) {
+            Shortcut.EDIT_PATH -> {
+                editingPath = true
+            }
+
+            Shortcut.RELOAD -> {
+                tab.reload()
+            }
+
+            Shortcut.TOGGLE_HIDDEN -> {
+                tab.toggleHidden()
+            }
+
+            Shortcut.LIST_VIEW, Shortcut.ICON_VIEW -> {
+                tab.setIconView(shortcut == Shortcut.ICON_VIEW)
+            }
+
+            Shortcut.BACK -> {
+                tab.back()
+            }
+
+            Shortcut.FORWARD -> {
+                tab.forward()
+            }
+
+            Shortcut.SELECT_ALL -> {
+                tab.selectAll()
+            }
+
+            Shortcut.NEW_FOLDER, Shortcut.NEW_FILE -> {
+                startNew(shortcut == Shortcut.NEW_FOLDER)
+            }
+
+            Shortcut.RENAME -> {
+                single?.let { currentAct(it, FileAction.RENAME) } ?: return false
+            }
+
+            Shortcut.COPY, Shortcut.CUT, Shortcut.TRASH, Shortcut.DELETE -> {
+                if (!ui.selecting) return false
+                val action =
+                    when (shortcut) {
+                        Shortcut.COPY -> FileAction.COPY
+                        Shortcut.CUT -> FileAction.CUT
+                        Shortcut.TRASH -> FileAction.TRASH
+                        else -> FileAction.DELETE
+                    }
+                currentAct(ui.selection.first(), action)
+            }
+
+            else -> {
+                return false
+            }
+        }
+        return true
+    }
+
     // El panel recibe el foco para que los atajos funcionen sin tocar nada antes.
     val focus = remember { FocusRequester() }
     var paneHasFocus by remember { mutableStateOf(false) }
@@ -392,57 +453,15 @@ private fun TabScreen(
             .fillMaxSize()
             .background(t.colors.paneBg.color)
             .onKeyEvent { event ->
+                if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                // Con el foco en el panel mismo, ↑/↓ entran a las filas.
+                if (paneFocused && (event.key == Key.DirectionDown || event.key == Key.DirectionUp)) {
+                    return@onKeyEvent focusManager.moveFocus(FocusDirection.Enter)
+                }
+                val shortcut = Shortcut.of(event)
                 when {
-                    event.type != KeyEventType.KeyDown -> {
-                        false
-                    }
-
-                    paneKeys(event) -> {
-                        true
-                    }
-
-                    paneFocused && (event.key == Key.DirectionDown || event.key == Key.DirectionUp) -> {
-                        focusManager.moveFocus(FocusDirection.Enter)
-                    }
-
-                    event.isCtrlPressed && event.key == Key.L -> {
-                        editingPath = true
-                        true
-                    }
-
-                    // Supr: a la papelera; Shift+Supr: borrar para siempre, con confirmación (UI_SPEC §8).
-                    event.key == Key.Delete && ui.selecting -> {
-                        currentAct(
-                            ui.selection.first(),
-                            if (event.isShiftPressed) FileAction.DELETE else FileAction.TRASH,
-                        )
-                        true
-                    }
-
-                    // F2 renombra lo seleccionado (uno); F7 o Ctrl+Shift+N, carpeta nueva; Ctrl+Alt+N, archivo (UI_SPEC §8).
-                    event.key == Key.F2 && ui.selected.size == 1 -> {
-                        currentAct(ui.selection.single(), FileAction.RENAME)
-                        true
-                    }
-
-                    event.key == Key.F7 || (event.isCtrlPressed && event.isShiftPressed && event.key == Key.N) -> {
-                        startNew(true)
-                        true
-                    }
-
-                    event.isCtrlPressed && event.isAltPressed && event.key == Key.N -> {
-                        startNew(false)
-                        true
-                    }
-
-                    // Ctrl+C / Ctrl+X al portapapeles interno; Ctrl+V lo atiende la ventana (pega en el panel activo).
-                    event.isCtrlPressed && (event.key == Key.C || event.key == Key.X) && ui.selecting -> {
-                        currentAct(ui.selection.first(), if (event.key == Key.C) FileAction.COPY else FileAction.CUT)
-                        true
-                    }
-
-                    event.isCtrlPressed && event.key == Key.A -> {
-                        tab.selectAll()
+                    // Backspace sube solo si el filtro no lo usa (ADR-006): se atiende después del filtro.
+                    shortcut != null && shortcut != Shortcut.UP && (paneKeys(shortcut) || runShortcut(shortcut)) -> {
                         true
                     }
 
@@ -452,24 +471,19 @@ private fun TabScreen(
                         true
                     }
 
-                    event.isCtrlPressed && event.key == Key.H -> {
-                        tab.toggleHidden()
-                        true
-                    }
-
-                    // Ctrl+1 lista, Ctrl+2 íconos (UI_SPEC §8).
-                    event.isCtrlPressed && (event.key == Key.One || event.key == Key.Two) -> {
-                        tab.setIconView(event.key == Key.Two)
-                        true
-                    }
-
                     // Escribir filtra; Backspace, Espacio y Esc editan el filtro solo si tiene texto (ADR-006).
                     filterKey(event)?.let(tab::applyFilterKey) == true -> {
                         true
                     }
 
+                    shortcut == Shortcut.UP -> {
+                        tab.up()
+                        true
+                    }
+
+                    // Lo de la ventana (Tab, F3, F5…) sigue hacia arriba.
                     else -> {
-                        handleNavigationKey(event, tab)
+                        false
                     }
                 }
             }.focusRequester(focus)
@@ -669,16 +683,16 @@ private fun TabScreen(
 /** Por debajo de esta altura de ventana el encabezado ocupa una sola fila. */
 internal val SHORT_HEIGHT = 480.dp
 
-/** Ctrl+T, Ctrl+W y Ctrl+Tab / Ctrl+Shift+Tab (UI_SPEC §8). */
-private fun handleTabKey(
-    event: KeyEvent,
+/** Pestañas del panel: Ctrl+T, Ctrl+W y Ctrl+Tab / Ctrl+Shift+Tab (UI_SPEC §8). */
+private fun handleTabShortcut(
+    shortcut: Shortcut,
     pane: PaneState,
 ): Boolean {
-    if (!event.isCtrlPressed) return false
-    when (event.key) {
-        Key.T -> pane.openTab()
-        Key.W -> pane.closeTab()
-        Key.Tab -> pane.cycle(if (event.isShiftPressed) -1 else 1)
+    when (shortcut) {
+        Shortcut.NEW_TAB -> pane.openTab()
+        Shortcut.CLOSE_TAB -> pane.closeTab()
+        Shortcut.NEXT_TAB -> pane.cycle(1)
+        Shortcut.PREVIOUS_TAB -> pane.cycle(-1)
         else -> return false
     }
     return true
@@ -703,22 +717,6 @@ private fun filterKey(event: KeyEvent): FilterKey? {
                 }?.let { FilterKey.Char(String(Character.toChars(it))) }
         }
     }
-}
-
-/** Backspace y Alt+↑ suben; Alt+← y Alt+→ recorren el historial; Ctrl+R relee (UI_SPEC §8). */
-private fun handleNavigationKey(
-    event: KeyEvent,
-    tab: TabState,
-): Boolean {
-    when {
-        event.isCtrlPressed && event.key == Key.R -> tab.reload()
-        event.key == Key.Backspace && !event.isAltPressed -> tab.up()
-        event.isAltPressed && event.key == Key.DirectionUp -> tab.up()
-        event.isAltPressed && event.key == Key.DirectionLeft -> tab.back()
-        event.isAltPressed && event.key == Key.DirectionRight -> tab.forward()
-        else -> return false
-    }
-    return true
 }
 
 /** Botón de navegación con glifo; deshabilitado se atenúa. */

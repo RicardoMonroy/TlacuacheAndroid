@@ -76,3 +76,8 @@ Formato: contexto → decisión → consecuencias. Añadir nuevas al final con n
 - **Contexto**: la terminal por panel es la función estrella en Linux, pero Android no ofrece un shell útil del usuario por carpeta y el objetivo aquí es la gestión de archivos a nivel usuario.
 - **Decisión**: no hay terminal. F4 queda libre. `core::shell` no se expone.
 - **Consecuencias**: menos permisos y menos superficie de riesgo. Si en el futuro se quiere, se evaluaría un «Abrir en Termux» opcional en un ADR nuevo.
+
+## ADR-A15 — Atajos en una tabla de Android, sin `[keys]` por ahora
+- **Contexto**: A4.1 pedía los atajos de UI_SPEC §8 desde `core::keymap` y `[keys]`, pero `core::keymap` (v0.2.0) solo define las acciones de la terminal de Linux (`toggle_terminal`, `leave_terminal`) con sintaxis de aceleradores de GTK.
+- **Decisión** (2026-10-28, con el usuario): una sola tabla en Kotlin (`ui/Shortcuts.kt`) despacha los atajos del panel y de la ventana y alimenta la lista de Meta+/ (`onProvideKeyboardShortcuts`). Sin remapeo con `[keys]` mientras el core no tenga esas acciones.
+- **Consecuencias**: el despacho y la lista del sistema no pueden contradecirse; una prueba JVM impide combinaciones repetidas. Para remapear habrá que ampliar `core::keymap` en el repo de Linux (acciones compartidas y un lector de la sintaxis de atajos), publicar una etiqueta y leerla aquí.
