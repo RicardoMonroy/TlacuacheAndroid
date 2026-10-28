@@ -40,11 +40,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.text
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -326,8 +331,9 @@ private fun HeaderCell(
         }
     val state =
         if (active) stringResource(if (sort.descending) R.string.sort_descending else R.string.sort_ascending) else ""
+    val name = stringResource(label)
     Text(
-        stringResource(label) + arrow,
+        name + arrow,
         color = if (active) t.colors.fg.color else t.colors.fgMuted.color,
         style = MaterialTheme.typography.labelLarge,
         textAlign = align,
@@ -336,8 +342,11 @@ private fun HeaderCell(
         modifier =
             modifier
                 .clickable(role = Role.Button) { onSort(key) }
-                .semantics { stateDescription = state }
-                .pointerHoverIcon(PointerIcon.Hand)
+                // La flecha no se lee: el sentido va en el estado («Tamaño, orden descendente»).
+                .semantics {
+                    text = AnnotatedString(name)
+                    stateDescription = state
+                }.pointerHoverIcon(PointerIcon.Hand)
                 .padding(vertical = 8.dp),
     )
 }
@@ -464,6 +473,17 @@ private fun AgeChip(
             AgeUnit.MONTHS -> stringResource(R.string.age_months, n)
             AgeUnit.YEARS -> stringResource(R.string.age_years, n)
         }
+    // TalkBack lee «hace 2 meses», no «2M» (A5.4).
+    val spoken =
+        when (age.unit) {
+            AgeUnit.NOW -> stringResource(R.string.age_now_spoken)
+            AgeUnit.MINUTES -> pluralStringResource(R.plurals.age_minutes_spoken, n, n)
+            AgeUnit.HOURS -> pluralStringResource(R.plurals.age_hours_spoken, n, n)
+            AgeUnit.DAYS -> pluralStringResource(R.plurals.age_days_spoken, n, n)
+            AgeUnit.MONTHS -> pluralStringResource(R.plurals.age_months_spoken, n, n)
+            AgeUnit.YEARS -> pluralStringResource(R.plurals.age_years_spoken, n, n)
+        }
+    val speak = Modifier.clearAndSetSemantics { contentDescription = spoken }
     if (t.style.ageStyle == AgeStyle.CHIP) {
         Text(
             label,
@@ -471,13 +491,13 @@ private fun AgeChip(
             style = MaterialTheme.typography.labelMedium,
             maxLines = 1,
             modifier =
-                Modifier
+                speak
                     .background(bucket, MaterialTheme.shapes.extraSmall)
                     .padding(horizontal = 6.dp, vertical = 2.dp),
         )
     } else {
         // Video inverso: sobre la selección la edad en texto toma su color (si no, no se leería).
         val color = if (selection?.weight != null) selection.content else bucket
-        Text(label, color = color, style = MaterialTheme.typography.labelMedium, maxLines = 1)
+        Text(label, color = color, style = MaterialTheme.typography.labelMedium, maxLines = 1, modifier = speak)
     }
 }
