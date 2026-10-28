@@ -100,7 +100,8 @@ Trabajar en orden. Cada tarea = un commit. Marcar `[x]` al cumplir el criterio d
 - [ ] **A4.8 Orden en la sesión**: guardar el orden de cada pestaña en `session.toml` (hoy se pierde al matar el proceso; `SessionTab` del core no lo tiene: cambio en el core, ADR-A02). CA: matar el proceso en **T** conserva el orden.
 - [x] **A4.9 Rueda y riel**: Shift+rueda desplaza en horizontal la ruta y la tira de pestañas; soltar archivos en los lugares y volúmenes del riel (hoy solo en la barra lateral fija). CA: en **PE** y en **T** vertical.
   - Hecho (2026-10-28), **PE** en el Pixel 10 y **T** vertical. Shift+rueda usa el paso del sistema para la rueda horizontal; en el riel se sueltan archivos en lugares, favoritos y volúmenes, resaltados con algo encima.
-- [ ] **A4.10 Velocidad y tiempo restante** en la notificación y el indicador de operaciones («12 MB/s · quedan 2 min»). CA: copia de 2 GB a la SD en **T** muestra ambos.
+- [x] **A4.10 Velocidad y tiempo restante** en la notificación y el indicador de operaciones («12 MB/s · quedan 2 min»). CA: copia de 2 GB a la SD en **T** muestra ambos.
+  - Hecho (2026-10-28), **T**: copiar 2 GB a la SD muestra «NN MB/s · quedan N min» en la notificación y en el detalle de operaciones. `core::ops::RateMeter` (v0.2.2, promedio móvil exponencial, vida media 3 s, sin estimación el primer segundo) por la FFI, una muestra cada 250 ms. Visto de paso: la SD de la tablet es FAT32 y una película de más de 4 GB falla con el aviso genérico de E/S (el sistema de archivos no admite archivos de 4 GiB o más).
 - [ ] **A4.11 Barra de herramientas de la ventana**: UI_SPEC §1 pide una barra de herramientas superior en expandida; hoy cada panel tiene su encabezado y ⋮. Decidir con un ADR y ajustar UI_SPEC; la barra de estado de un panel estrecho se aprieta con la selección (acortar textos). CA: ADR escrito y **T** vertical sin textos cortados.
 
 ## Hito A5 — Temas, preferencias y v0.1

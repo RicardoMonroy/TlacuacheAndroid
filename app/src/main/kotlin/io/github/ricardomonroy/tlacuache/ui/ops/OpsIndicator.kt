@@ -35,6 +35,7 @@ import io.github.ricardomonroy.tlacuache.ffi.OpKind
 import io.github.ricardomonroy.tlacuache.ffi.OpState
 import io.github.ricardomonroy.tlacuache.ffi.Operation
 import io.github.ricardomonroy.tlacuache.ops.OpsRepository
+import io.github.ricardomonroy.tlacuache.ops.rateText
 import io.github.ricardomonroy.tlacuache.ui.theme.TlacuacheTheme
 import io.github.ricardomonroy.tlacuache.ui.theme.color
 import java.io.File
@@ -158,12 +159,31 @@ private fun Operation.percent(): String? =
 @Composable
 private fun Operation.status(volumeName: (File) -> String?): String =
     when (state) {
-        OpState.Queued -> stringResource(R.string.ops_queued)
-        OpState.Running -> listOfNotNull(percent(), progress.current).joinToString(" · ")
-        OpState.Cancelling -> stringResource(R.string.ops_cancelling)
-        OpState.Done -> finishedMessage(LocalResources.current, this, volumeName)
-        OpState.Cancelled -> stringResource(R.string.ops_cancelled)
-        is OpState.Failed -> finishedMessage(LocalResources.current, this, volumeName)
+        OpState.Queued -> {
+            stringResource(R.string.ops_queued)
+        }
+
+        OpState.Running -> {
+            val rate by OpsRepository.rate.collectAsStateWithLifecycle()
+            val speed = rate?.takeIf { it.first == id }?.let { rateText(LocalContext.current, it.second) }
+            listOfNotNull(percent(), speed, progress.current).joinToString(" · ")
+        }
+
+        OpState.Cancelling -> {
+            stringResource(R.string.ops_cancelling)
+        }
+
+        OpState.Done -> {
+            finishedMessage(LocalResources.current, this, volumeName)
+        }
+
+        OpState.Cancelled -> {
+            stringResource(R.string.ops_cancelled)
+        }
+
+        is OpState.Failed -> {
+            finishedMessage(LocalResources.current, this, volumeName)
+        }
     }
 
 private val OpKind.label: Int

@@ -188,6 +188,19 @@
     <string name="ops_preparing">Preparando…</string>
     <string name="ops_cancel">Cancelar</string>
     <string name="ops_progress">%1$s de %2$s</string>
+    <string name="ops_speed">%s/s</string>
+    <plurals name="ops_eta_seconds">
+        <item quantity="one">queda %d s</item>
+        <item quantity="other">quedan %d s</item>
+    </plurals>
+    <plurals name="ops_eta_minutes">
+        <item quantity="one">queda %d min</item>
+        <item quantity="other">quedan %d min</item>
+    </plurals>
+    <plurals name="ops_eta_hours">
+        <item quantity="one">queda %1$d h %2$d min</item>
+        <item quantity="other">quedan %1$d h %2$d min</item>
+    </plurals>
     <plurals name="ops_copying">
         <item quantity="one">Copiando %d elemento</item>
         <item quantity="other">Copiando %d elementos</item>

@@ -196,13 +196,18 @@ class OpsService : Service() {
         return builder
             .setContentTitle(title)
             .setContentText(
-                total?.let {
-                    getString(
-                        R.string.ops_progress,
-                        Formatter.formatShortFileSize(this, p.bytesDone.toLong()),
-                        Formatter.formatShortFileSize(this, it),
-                    )
-                },
+                listOfNotNull(
+                    total?.let {
+                        getString(
+                            R.string.ops_progress,
+                            Formatter.formatShortFileSize(this, p.bytesDone.toLong()),
+                            Formatter.formatShortFileSize(this, it),
+                        )
+                    },
+                    OpsRepository.rate.value
+                        ?.takeIf { it.first == running.id }
+                        ?.let { rateText(this, it.second) },
+                ).joinToString(" · ").ifEmpty { null },
             ).setSubText(p.current)
             .setProgress(PROGRESS_MAX, ((fraction ?: 0.0) * PROGRESS_MAX).toInt(), fraction == null)
             .addAction(

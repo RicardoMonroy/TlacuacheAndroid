@@ -9,6 +9,8 @@ import io.github.ricardomonroy.tlacuache.ffi.OpRequest
 import io.github.ricardomonroy.tlacuache.ffi.OpState
 import io.github.ricardomonroy.tlacuache.ffi.Operation
 import io.github.ricardomonroy.tlacuache.ffi.OpsException
+import io.github.ricardomonroy.tlacuache.ffi.Rate
+import io.github.ricardomonroy.tlacuache.ffi.RateMeter
 import io.github.ricardomonroy.tlacuache.storage.Volumes
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
@@ -35,6 +37,11 @@ object OpsRepository {
 
     /** Instantánea de la cola, para la notificación y el indicador. */
     val operations: StateFlow<List<Operation>> = _operations.asStateFlow()
+
+    private val _rate = MutableStateFlow<Pair<ULong, Rate>?>(null)
+
+    /** Velocidad y tiempo restante de la operación en curso y su id (A4.10); `null` si no corre ninguna. */
+    val rate: StateFlow<Pair<ULong, Rate>?> = _rate.asStateFlow()
 
     /** Un conflicto esperando respuesta de la usuaria (diálogo en la ventana). */
     class PendingConflict(
@@ -132,6 +139,7 @@ object OpsRepository {
         val op = queue.get(id) ?: return
         val changed = mutableListOf<File>()
         var lastPublish = 0L
+        val meter = RateMeter()
         val context = currentCoroutineContext()
         try {
             val journal =
@@ -144,6 +152,7 @@ object OpsRepository {
                         val now = SystemClock.uptimeMillis()
                         if (now - lastPublish >= PUBLISH_MS) {
                             lastPublish = now
+                            _rate.value = id to meter.sample(now.toULong(), it.bytesDone, it.bytesTotal)
                             publish()
                         }
                     },
@@ -161,6 +170,8 @@ object OpsRepository {
             markCancelled(id)
             throw e
         } finally {
+            _rate.value = null
+            meter.close()
             scan(changed)
             publish()
         }

@@ -246,6 +246,36 @@ impl ConflictPolicy {
     }
 }
 
+/// Velocidad y tiempo restante tras una muestra; `None` mientras no se sabe.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, uniffi::Record)]
+pub struct Rate {
+    pub bytes_per_sec: Option<u64>,
+    pub eta_secs: Option<u64>,
+}
+
+/// Velocidad de una operación en curso (`core::ops::RateMeter`); una por operación.
+#[derive(uniffi::Object, Default)]
+pub struct RateMeter(Mutex<core::RateMeter>);
+
+#[uniffi::export]
+impl RateMeter {
+    #[uniffi::constructor]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Añade una muestra (reloj monótono en ms) y devuelve la lectura: una llamada por
+    /// aviso de progreso.
+    pub fn sample(&self, now_ms: u64, bytes_done: u64, bytes_total: Option<u64>) -> Rate {
+        let mut m = self.0.lock().unwrap_or_else(|e| e.into_inner());
+        m.sample(now_ms, bytes_done);
+        Rate {
+            bytes_per_sec: m.bytes_per_sec(),
+            eta_secs: bytes_total.and_then(|t| m.eta_secs(t)),
+        }
+    }
+}
+
 /// Reemplazar solo entre elementos del mismo tipo que no sean el mismo elemento.
 #[uniffi::export]
 pub fn replace_allowed(source_is_dir: bool, dest_is_dir: bool, same_item: bool) -> bool {
@@ -409,6 +439,16 @@ impl From<core::ConflictAction> for ConflictAction {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn rate_meter_reads_after_a_second() {
+        let m = RateMeter::new();
+        m.sample(0, 0, Some(10_000_000));
+        let r = m.sample(1_000, 2_000_000, Some(10_000_000));
+        assert_eq!(r.bytes_per_sec, Some(2_000_000));
+        assert_eq!(r.eta_secs, Some(4));
+        assert_eq!(m.sample(1_500, 3_000_000, None).eta_secs, None);
+    }
+
     use super::*;
 
     fn request(kind: OpKind, sources: &[&str], dest: Option<&str>) -> OpRequest {
