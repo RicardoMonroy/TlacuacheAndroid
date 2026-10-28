@@ -54,6 +54,10 @@ android {
             listOf(
                 // Falso positivo: Lint no evalúa la lista dinámica de abiFilters, que sí incluye x86_64.
                 "ChromeOsAbiSupport",
+                // Avisan de versiones nuevas publicadas: romperían el build por la fecha, no por el código.
+                // Las versiones se suben a propósito (CLAUDE.md), con su verificación de compatibilidad.
+                "AndroidGradlePluginVersion",
+                "GradleDependency",
             )
     }
 
