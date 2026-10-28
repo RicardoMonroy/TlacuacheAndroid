@@ -17,7 +17,8 @@ object FileIntents {
     fun mimeType(file: File): String =
         MimeTypeMap.getSingleton().getMimeTypeFromExtension(file.extension.lowercase()) ?: ANY
 
-    private fun uri(
+    /** `content://` de nuestro FileProvider para pasar [file] a otra app (abrir, compartir, arrastrar). */
+    fun uri(
         context: Context,
         file: File,
     ): Uri = FileProvider.getUriForFile(context, "${context.packageName}.files", file)

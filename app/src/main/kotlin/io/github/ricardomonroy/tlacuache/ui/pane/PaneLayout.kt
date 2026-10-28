@@ -2,6 +2,7 @@ package io.github.ricardomonroy.tlacuache.ui.pane
 
 import android.Manifest
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -40,6 +41,7 @@ import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -209,132 +211,146 @@ fun PaneLayout(window: WindowViewModel) {
             if (result == SnackbarResult.ActionPerformed) OpsRepository.undo(context, op.id)
         }
     }
-    Box(
-        Modifier.fillMaxSize().onPreviewKeyEvent {
-            // Ctrl y Shift al soltar un arrastre (copiar o mover): el evento de soltar no los trae.
-            DragKeys.ctrl = it.isCtrlPressed
-            DragKeys.shift = it.isShiftPressed
-            false
-        },
-    ) {
-        ModalNavigationDrawer(
-            drawerContent = {
-                // Como cajón llega al borde de la pantalla: nada bajo la cámara en horizontal.
-                val cutout = WindowInsets.displayCutout.only(WindowInsetsSides.Start)
-                Sidebar(
-                    items,
-                    toggleDrawer,
-                    R.string.sidebar_collapse,
-                    Modifier.background(t.colors.sidebarBg.color).windowInsetsPadding(cutout).width(SidebarWidth),
-                )
+    // Lo que llega arrastrado desde otras apps se copia aquí (A4.4).
+    val import: (List<Uri>, File) -> Unit = { uris, dest ->
+        run(OpRequest(OpKind.COPY, uris.map(Uri::toString), dest.path, emptyList()))
+    }
+    CompositionLocalProvider(LocalDropImport provides import) {
+        Box(
+            Modifier.fillMaxSize().onPreviewKeyEvent {
+                // Ctrl y Shift al soltar un arrastre (copiar o mover): el evento de soltar no los trae.
+                DragKeys.ctrl = it.isCtrlPressed
+                DragKeys.shift = it.isShiftPressed
+                false
             },
-            drawerState = drawer,
-            // En compacta se abre también deslizando desde el borde; en las demás, solo con ☰.
-            gesturesEnabled = !wide || drawer.isOpen,
-            scrimColor =
-                t.colors.windowBg.color
-                    .copy(alpha = 0.6f),
         ) {
-            Row(
-                Modifier
-                    .fillMaxSize()
-                    .background(t.colors.paneBg.color)
-                    // En horizontal, la cámara frontal queda a un lado: nada debajo de ella.
-                    .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))
-                    .onKeyEvent { event ->
-                        // Atajos de la ventana: lo que el panel no atendió (UI_SPEC §8).
-                        if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
-                        when (Shortcut.of(event)) {
-                            Shortcut.OTHER_PANE -> window.activateOther()
-                            Shortcut.TOGGLE_DUAL -> if (wide) window.toggleDual() else window.activateOther()
-                            Shortcut.SIDEBAR -> if (permanentFits) window.toggleSidebar() else toggleDrawer()
-                            Shortcut.COPY_TO_OTHER -> transferSelection(OpKind.COPY)
-                            Shortcut.MOVE_TO_OTHER -> transferSelection(OpKind.MOVE)
-                            Shortcut.PASTE -> paste()
-                            Shortcut.UNDO -> OpsRepository.undoLast(context)
-                            else -> return@onKeyEvent false
-                        }
-                        true
-                    },
+            ModalNavigationDrawer(
+                drawerContent = {
+                    // Como cajón llega al borde de la pantalla: nada bajo la cámara en horizontal.
+                    val cutout = WindowInsets.displayCutout.only(WindowInsetsSides.Start)
+                    Sidebar(
+                        items,
+                        toggleDrawer,
+                        R.string.sidebar_collapse,
+                        Modifier.background(t.colors.sidebarBg.color).windowInsetsPadding(cutout).width(SidebarWidth),
+                    )
+                },
+                drawerState = drawer,
+                // En compacta se abre también deslizando desde el borde; en las demás, solo con ☰.
+                gesturesEnabled = !wide || drawer.isOpen,
+                scrimColor =
+                    t.colors.windowBg.color
+                        .copy(alpha = 0.6f),
             ) {
-                when {
-                    !wide -> {}
-
-                    permanentFits && !collapsed -> {
-                        Sidebar(items, window::toggleSidebar, R.string.sidebar_collapse, Modifier.width(SidebarWidth))
-                    }
-
-                    else -> {
-                        // ☰ del riel: expande la permanente si cabe; si no, abre el cajón con la barra completa.
-                        val expand = if (permanentFits) window::toggleSidebar else toggleDrawer
-                        SidebarRail(items, expand, R.string.sidebar_expand)
-                    }
-                }
-                Row(Modifier.weight(1f).onSizeChanged { rowWidth = it.width.toFloat().coerceAtLeast(1f) }) {
-                    if (wide && dual) {
-                        window.panes.forEachIndexed { i, pane ->
-                            if (i == 1) {
-                                PaneStrip(
-                                    fromA = active == 0,
-                                    enabled = activeUi.selecting,
-                                    moveEnabled = activeUi.selecting && !activeUi.selectionProtected,
-                                    onTransfer = transferSelection,
-                                ) { window.moveSplit(it / rowWidth, minSplit) }
+                Row(
+                    Modifier
+                        .fillMaxSize()
+                        .background(t.colors.paneBg.color)
+                        // En horizontal, la cámara frontal queda a un lado: nada debajo de ella.
+                        .windowInsetsPadding(WindowInsets.displayCutout.only(WindowInsetsSides.Horizontal))
+                        .onKeyEvent { event ->
+                            // Atajos de la ventana: lo que el panel no atendió (UI_SPEC §8).
+                            if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                            when (Shortcut.of(event)) {
+                                Shortcut.OTHER_PANE -> window.activateOther()
+                                Shortcut.TOGGLE_DUAL -> if (wide) window.toggleDual() else window.activateOther()
+                                Shortcut.SIDEBAR -> if (permanentFits) window.toggleSidebar() else toggleDrawer()
+                                Shortcut.COPY_TO_OTHER -> transferSelection(OpKind.COPY)
+                                Shortcut.MOVE_TO_OTHER -> transferSelection(OpKind.MOVE)
+                                Shortcut.PASTE -> paste()
+                                Shortcut.UNDO -> OpsRepository.undoLast(context)
+                                else -> return@onKeyEvent false
                             }
+                            true
+                        },
+                ) {
+                    when {
+                        !wide -> {}
+
+                        permanentFits && !collapsed -> {
+                            Sidebar(
+                                items,
+                                window::toggleSidebar,
+                                R.string.sidebar_collapse,
+                                Modifier.width(SidebarWidth),
+                            )
+                        }
+
+                        else -> {
+                            // ☰ del riel: expande la permanente si cabe; si no, abre el cajón con la barra completa.
+                            val expand = if (permanentFits) window::toggleSidebar else toggleDrawer
+                            SidebarRail(items, expand, R.string.sidebar_expand)
+                        }
+                    }
+                    Row(Modifier.weight(1f).onSizeChanged { rowWidth = it.width.toFloat().coerceAtLeast(1f) }) {
+                        if (wide && dual) {
+                            window.panes.forEachIndexed { i, pane ->
+                                if (i == 1) {
+                                    PaneStrip(
+                                        fromA = active == 0,
+                                        enabled = activeUi.selecting,
+                                        moveEnabled = activeUi.selecting && !activeUi.selectionProtected,
+                                        onTransfer = transferSelection,
+                                    ) { window.moveSplit(it / rowWidth, minSplit) }
+                                }
+                                PaneScreen(
+                                    pane,
+                                    window.pathInput,
+                                    active = i == active && !drawer.isOpen,
+                                    onActivate = { window.activate(i) },
+                                    dual = true,
+                                    onToggleDual = window::toggleDual,
+                                    onAddFavorite = window::addFavorite,
+                                    onTransfer = { kind, files -> transfer(kind, files, 1 - i) },
+                                    onRemove = remove,
+                                    onRun = run,
+                                    onDrop = drop,
+                                    modifier = Modifier.weight(if (i == 0) shownSplit else 1 - shownSplit),
+                                )
+                            }
+                        } else {
                             PaneScreen(
-                                pane,
+                                window.panes[active],
                                 window.pathInput,
-                                active = i == active && !drawer.isOpen,
-                                onActivate = { window.activate(i) },
-                                dual = true,
+                                active = !drawer.isOpen,
+                                onActivate = {},
+                                switcher = {
+                                    if (!wide) DrawerButton(toggleDrawer)
+                                    PaneSwitcher(active, window::activate)
+                                },
+                                dual = if (wide) false else null,
                                 onToggleDual = window::toggleDual,
                                 onAddFavorite = window::addFavorite,
-                                onTransfer = { kind, files -> transfer(kind, files, 1 - i) },
+                                onTransfer = { kind, files -> transfer(kind, files, 1 - active) },
                                 onRemove = remove,
                                 onRun = run,
                                 onDrop = drop,
-                                modifier = Modifier.weight(if (i == 0) shownSplit else 1 - shownSplit),
+                                otherPane = if (active == 0) "B" else "A",
+                                modifier = Modifier.weight(1f),
                             )
                         }
-                    } else {
-                        PaneScreen(
-                            window.panes[active],
-                            window.pathInput,
-                            active = !drawer.isOpen,
-                            onActivate = {},
-                            switcher = {
-                                if (!wide) DrawerButton(toggleDrawer)
-                                PaneSwitcher(active, window::activate)
-                            },
-                            dual = if (wide) false else null,
-                            onToggleDual = window::toggleDual,
-                            onAddFavorite = window::addFavorite,
-                            onTransfer = { kind, files -> transfer(kind, files, 1 - active) },
-                            onRemove = remove,
-                            onRun = run,
-                            onDrop = drop,
-                            otherPane = if (active == 0) "B" else "A",
-                            modifier = Modifier.weight(1f),
-                        )
                     }
                 }
             }
-        }
-        SnackbarHost(snackbar, Modifier.align(Alignment.BottomCenter).windowInsetsPadding(WindowInsets.navigationBars))
-        ClipboardPill(
-            onPaste = { paste() },
-            modifier =
+            SnackbarHost(
+                snackbar,
+                Modifier.align(Alignment.BottomCenter).windowInsetsPadding(WindowInsets.navigationBars),
+            )
+            ClipboardPill(
+                onPaste = { paste() },
+                modifier =
+                    Modifier
+                        .align(Alignment.BottomStart)
+                        .windowInsetsPadding(WindowInsets.navigationBars)
+                        .padding(start = 16.dp, bottom = 40.dp),
+            )
+            OpsIndicator(
                 Modifier
-                    .align(Alignment.BottomStart)
+                    .align(Alignment.BottomEnd)
                     .windowInsetsPadding(WindowInsets.navigationBars)
-                    .padding(start = 16.dp, bottom = 40.dp),
-        )
-        OpsIndicator(
-            Modifier
-                .align(Alignment.BottomEnd)
-                .windowInsetsPadding(WindowInsets.navigationBars)
-                .padding(end = 16.dp, bottom = 40.dp),
-        )
+                    .padding(end = 16.dp, bottom = 40.dp),
+            )
+        }
     }
 }
 

@@ -270,6 +270,25 @@ class OpsRunnerTest {
         assertEquals(7L, File(dst, "a.txt").length())
     }
 
+    @Test
+    fun importsFromOtherAppsWithAFreeNameAndNoPartLeft() {
+        file(dst, "foto.jpg", 1)
+        val provider =
+            mapOf(
+                "content://media/1" to OpsRunner.ContentSource("foto.jpg", 3) { "abc".byteInputStream() },
+                "content://media/2" to OpsRunner.ContentSource("a/b.txt", null) { "xy".byteInputStream() },
+            )
+        val importer =
+            OpsRunner(volumeRoots = { listOf(root) }, askConflict = { answer }, contentSource = { provider[it] })
+        val uris = listOf("content://media/1", "content://media/2")
+        val journal = run(op(OpKind.COPY).copy(sources = uris), importer)
+        assertEquals("abc", File(dst, "foto (2).jpg").readText())
+        assertEquals("xy", File(dst, "a_b.txt").readText())
+        assertEquals(1L, File(dst, "foto.jpg").length())
+        assertEquals(listOf("content://media/1", "content://media/2"), journal.pairs.map { it.from })
+        assertTrue(parts(dst).isEmpty())
+    }
+
     private fun expectFailure(
         failure: OpsRunner.Failure,
         block: () -> Unit,

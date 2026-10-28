@@ -2,6 +2,8 @@ package io.github.ricardomonroy.tlacuache.ops
 
 import android.content.Context
 import android.os.SystemClock
+import android.provider.OpenableColumns
+import androidx.core.net.toUri
 import io.github.ricardomonroy.tlacuache.ffi.OpQueue
 import io.github.ricardomonroy.tlacuache.ffi.OpRequest
 import io.github.ricardomonroy.tlacuache.ffi.OpState
@@ -109,7 +111,12 @@ object OpsRepository {
         context: Context,
         scan: (List<File>) -> Unit,
     ) {
-        val runner = OpsRunner(volumeRoots = { Volumes.roots(context) }, askConflict = ::ask)
+        val runner =
+            OpsRunner(
+                volumeRoots = { Volumes.roots(context) },
+                askConflict = ::ask,
+                contentSource = { contentSource(context, it) },
+            )
         while (true) {
             val ids = queue.startNext().ifEmpty { return }
             publish()
@@ -158,6 +165,39 @@ object OpsRepository {
             publish()
         }
         queue.get(id)?.let(_finished::tryEmit)
+    }
+
+    /** Nombre y tamaño que da el proveedor de [uri] (`OpenableColumns`) y cómo leerlo; `null` si no responde. */
+    private fun contentSource(
+        context: Context,
+        uri: String,
+    ): OpsRunner.ContentSource? {
+        val parsed = uri.toUri()
+        val resolver = context.contentResolver
+        val (name, size) =
+            runCatching {
+                resolver
+                    .query(
+                        parsed,
+                        arrayOf(OpenableColumns.DISPLAY_NAME, OpenableColumns.SIZE),
+                        null,
+                        null,
+                        null,
+                    )?.use { c ->
+                        if (!c.moveToFirst()) return@use null
+                        val size =
+                            c
+                                .getColumnIndex(
+                                    OpenableColumns.SIZE,
+                                ).takeIf { it >= 0 && !c.isNull(it) }
+                                ?.let(c::getLong)
+                        c.getString(c.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME)) to size
+                    }
+            }.getOrNull() ?: return null
+        return OpsRunner.ContentSource(name, size) {
+            resolver.openInputStream(parsed)
+                ?: throw IOException("sin datos: $uri")
+        }
     }
 
     /** Cancelada aunque nadie lo pidiera por la cola (el servicio se detuvo). */

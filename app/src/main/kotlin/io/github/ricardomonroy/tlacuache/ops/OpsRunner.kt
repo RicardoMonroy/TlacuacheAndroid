@@ -17,6 +17,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
+import java.io.InputStream
 import java.nio.file.AtomicMoveNotSupportedException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -40,7 +41,15 @@ class OpsRunner(
     private val atomicMove: (Path, Path) -> Unit = { from, to -> Files.move(from, to, StandardCopyOption.ATOMIC_MOVE) },
     /** Papelera propia (ADR-A05). */
     private val trash: TrashStore = TrashStore(volumeRoots),
+    /** Lo que llega de otra app (`content://`): nombre, tamaño si se sabe y cómo leerlo. */
+    private val contentSource: (String) -> ContentSource? = { null },
 ) {
+    class ContentSource(
+        val name: String,
+        val size: Long?,
+        val open: () -> InputStream,
+    )
+
     /** El destino [existing] ya existe al copiar o mover [source]. */
     class Conflict(
         val source: File,
@@ -113,16 +122,55 @@ class OpsRunner(
         withContext(Dispatchers.IO) {
             Run(op.sources.map(::File), op.dest?.let(::File), cancelled, progress, changed).run {
                 when (op.kind) {
-                    OpKind.COPY -> copyAll()
-                    OpKind.MOVE -> moveAll()
-                    OpKind.TRASH -> trashAll()
-                    OpKind.DELETE -> deleteAll()
-                    OpKind.UNTRASH -> untrashAll()
-                    OpKind.RESTORE -> restoreAll(op)
-                    OpKind.RENAME -> rename()
-                    OpKind.MKDIR -> create(directory = true)
-                    OpKind.CREATE_FILE -> create(directory = false)
-                    else -> throw FailedException(Failure.UNSUPPORTED)
+                    // Desde otra app (arrastrar y soltar): URIs `content://` (A4.4).
+                    OpKind.COPY -> {
+                        if (op.sources.any {
+                                it.startsWith(
+                                    "content://",
+                                )
+                            }
+                        ) {
+                            importAll(op.sources)
+                        } else {
+                            copyAll()
+                        }
+                    }
+
+                    OpKind.MOVE -> {
+                        moveAll()
+                    }
+
+                    OpKind.TRASH -> {
+                        trashAll()
+                    }
+
+                    OpKind.DELETE -> {
+                        deleteAll()
+                    }
+
+                    OpKind.UNTRASH -> {
+                        untrashAll()
+                    }
+
+                    OpKind.RESTORE -> {
+                        restoreAll(op)
+                    }
+
+                    OpKind.RENAME -> {
+                        rename()
+                    }
+
+                    OpKind.MKDIR -> {
+                        create(directory = true)
+                    }
+
+                    OpKind.CREATE_FILE -> {
+                        create(directory = false)
+                    }
+
+                    else -> {
+                        throw FailedException(Failure.UNSUPPORTED)
+                    }
                 }
             }
         }
@@ -258,6 +306,23 @@ class OpsRunner(
             for (src in sources) {
                 if (dest.absoluteFile.startsWith(src.absoluteFile)) throw FailedException(Failure.INTO_ITSELF, src.path)
                 copyInto(src, dest)?.let { pairs += MovedItem(src.path, it.path) }
+            }
+            return journal()
+        }
+
+        /**
+         * Copia lo que llega de otra app: nombre y tamaño del proveedor, con un nombre libre en el destino (nunca
+         * reemplaza nada: no hay un archivo con el que comparar).
+         */
+        fun importAll(uris: List<String>): Journal {
+            checkDest()
+            for (uri in uris) {
+                checkCancelled()
+                val source = contentSource(uri) ?: throw FailedException(Failure.IO, uri)
+                val name = source.name.replace('/', '_').ifBlank { uri.substringAfterLast('/') }
+                val target = File(dest, nextFreeName(name, false, dest.list().orEmpty().toList()))
+                copyStream(uri, name, target, source.size, null, source.open)
+                pairs += MovedItem(uri, target.path)
             }
             return journal()
         }
@@ -410,14 +475,26 @@ class OpsRunner(
             }
         }
 
-        /** Copia por bloques a `.tlacuache-part` y renombra al terminar; el `.part` nunca queda. */
         fun copyFile(
             src: File,
             target: File,
+        ) = copyStream(src.path, src.name, target, src.length(), src.lastModified(), src::inputStream)
+
+        /**
+         * Copia por bloques a `.tlacuache-part` y renombra al terminar; el `.part` nunca queda. Verifica el tamaño
+         * si se conoce ([expected]) y conserva la fecha si la hay ([modified]).
+         */
+        fun copyStream(
+            origin: String,
+            label: String,
+            target: File,
+            expected: Long?,
+            modified: Long?,
+            open: () -> InputStream,
         ) {
             val part = File(target.parentFile, "${target.name}$PART_SUFFIX")
             try {
-                src.inputStream().use { input ->
+                open().use { input ->
                     part.outputStream().use { output ->
                         val buffer = ByteArray(BLOCK)
                         while (true) {
@@ -426,19 +503,19 @@ class OpsRunner(
                             if (read < 0) break
                             output.write(buffer, 0, read)
                             bytesDone += read
-                            publish(src.name)
+                            publish(label)
                         }
                         output.fd.sync()
                     }
                 }
-                if (part.length() != src.length()) throw FailedException(Failure.SIZE_MISMATCH, src.path)
-                part.setLastModified(src.lastModified())
+                if (expected != null && part.length() != expected) throw FailedException(Failure.SIZE_MISMATCH, origin)
+                modified?.let(part::setLastModified)
                 Files.move(part.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING)
                 filesDone++
-                publish(src.name)
+                publish(label)
                 changed(target)
             } catch (e: IOException) {
-                throw FailedException(Failure.IO, src.path, e)
+                throw FailedException(Failure.IO, origin, e)
             } finally {
                 part.delete()
             }
