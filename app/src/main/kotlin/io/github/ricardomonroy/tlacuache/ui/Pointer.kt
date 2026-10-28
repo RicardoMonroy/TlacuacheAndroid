@@ -1,5 +1,8 @@
 package io.github.ricardomonroy.tlacuache.ui
 
+import android.view.ViewConfiguration
+import androidx.compose.foundation.gestures.ScrollableState
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -7,10 +10,13 @@ import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.PointerType
+import androidx.compose.ui.input.pointer.isShiftPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
@@ -18,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.ricardomonroy.tlacuache.storage.PreferencesStore
 import io.github.ricardomonroy.tlacuache.ui.theme.TlacuacheTheme
+import kotlinx.coroutines.launch
 
 /** El último puntero de la ventana fue un ratón o touchpad (UI_SPEC §3): filas compactas, hover. */
 val LocalMousePointer = compositionLocalOf { false }
@@ -68,4 +75,25 @@ fun rowHeight(): Dp {
             PreferencesStore.Density.COMPACT -> true
         }
     return (if (compact) maxOf(base, 32) else maxOf(base, 48)).dp
+}
+
+/**
+ * Shift+rueda desplaza [state] en horizontal (A4.9): la ruta y la tira de pestañas, que con la rueda sola
+ * no se mueven. El paso es el del sistema para la rueda horizontal.
+ */
+@Composable
+fun Modifier.shiftWheelScroll(state: ScrollableState): Modifier {
+    val scope = rememberCoroutineScope()
+    val factor = ViewConfiguration.get(LocalContext.current).scaledHorizontalScrollFactor
+    return pointerInput(state) {
+        awaitPointerEventScope {
+            while (true) {
+                val event = awaitPointerEvent(PointerEventPass.Initial)
+                if (event.type != PointerEventType.Scroll || !event.keyboardModifiers.isShiftPressed) continue
+                val delta = event.changes.sumOf { it.scrollDelta.y.toDouble() + it.scrollDelta.x }.toFloat()
+                event.changes.forEach { it.consume() }
+                scope.launch { state.scrollBy(delta * factor) }
+            }
+        }
+    }
 }

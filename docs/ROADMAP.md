@@ -84,7 +84,8 @@ Trabajar en orden. Cada tarea = un commit. Marcar `[x]` al cumplir el criterio d
 - [x] **A4.7 Pestañas con ratón**: clic central cierra; arrastrar una pestaña la reordena o la pasa al otro panel (expandida). CA: en **PE**.
   - Hecho (2026-10-28), **PE** en el Pixel 10 con monitor, teclado y ratón, y **T** con el dedo. Con el dedo se arrastra tras la pulsación larga (cierra el menú); fuera de su tira la pestaña se ve como una etiqueta que sigue al puntero; la última de un panel no se pasa al otro.
 - [ ] **A4.8 Orden en la sesión**: guardar el orden de cada pestaña en `session.toml` (hoy se pierde al matar el proceso; `SessionTab` del core no lo tiene: cambio en el core, ADR-A02). CA: matar el proceso en **T** conserva el orden.
-- [ ] **A4.9 Rueda y riel**: Shift+rueda desplaza en horizontal la ruta y la tira de pestañas; soltar archivos en los lugares y volúmenes del riel (hoy solo en la barra lateral fija). CA: en **PE** y en **T** vertical.
+- [x] **A4.9 Rueda y riel**: Shift+rueda desplaza en horizontal la ruta y la tira de pestañas; soltar archivos en los lugares y volúmenes del riel (hoy solo en la barra lateral fija). CA: en **PE** y en **T** vertical.
+  - Hecho (2026-10-28), **PE** en el Pixel 10 y **T** vertical. Shift+rueda usa el paso del sistema para la rueda horizontal; en el riel se sueltan archivos en lugares, favoritos y volúmenes, resaltados con algo encima.
 - [ ] **A4.10 Velocidad y tiempo restante** en la notificación y el indicador de operaciones («12 MB/s · quedan 2 min»). CA: copia de 2 GB a la SD en **T** muestra ambos.
 - [ ] **A4.11 Barra de herramientas de la ventana**: UI_SPEC §1 pide una barra de herramientas superior en expandida; hoy cada panel tiene su encabezado y ⋮. Decidir con un ADR y ajustar UI_SPEC; la barra de estado de un panel estrecho se aprieta con la selección (acortar textos). CA: ADR escrito y **T** vertical sin textos cortados.
 

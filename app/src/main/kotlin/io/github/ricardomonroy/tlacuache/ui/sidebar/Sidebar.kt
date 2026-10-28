@@ -146,18 +146,23 @@ fun SidebarRail(
             unselectedTextColor = t.colors.fgMuted.color,
         )
 
+    // Como en la barra completa, cada carpeta acepta archivos soltados y se resalta con algo encima (A4.9).
     @Composable
     fun item(
         @DrawableRes icon: Int,
         label: String,
         dir: File,
-    ) = NavigationRailItem(
-        selected = dir == items.current,
-        onClick = { items.onOpen(dir) },
-        icon = { Icon(painterResource(icon), contentDescription = null) },
-        label = { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-        colors = colors,
-    )
+    ) {
+        var dropHere by remember { mutableStateOf(false) }
+        NavigationRailItem(
+            selected = dir == items.current || dropHere,
+            onClick = { items.onOpen(dir) },
+            icon = { Icon(painterResource(icon), contentDescription = null) },
+            label = { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            modifier = Modifier.fileDropTarget(dir, items.onDrop) { dropHere = it },
+            colors = colors,
+        )
+    }
     Column(
         modifier
             .fillMaxHeight()

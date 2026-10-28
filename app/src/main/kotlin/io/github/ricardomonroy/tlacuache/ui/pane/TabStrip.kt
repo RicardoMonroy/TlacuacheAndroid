@@ -67,6 +67,7 @@ import io.github.ricardomonroy.tlacuache.state.PaneState
 import io.github.ricardomonroy.tlacuache.state.TabState
 import io.github.ricardomonroy.tlacuache.ui.Shortcut
 import io.github.ricardomonroy.tlacuache.ui.WithTooltip
+import io.github.ricardomonroy.tlacuache.ui.shiftWheelScroll
 import io.github.ricardomonroy.tlacuache.ui.theme.TlacuacheTheme
 import io.github.ricardomonroy.tlacuache.ui.theme.color
 import io.github.ricardomonroy.tlacuache.ui.theme.headerMuted
@@ -150,7 +151,11 @@ fun TabStrip(
         Modifier.fillMaxWidth().height(40.dp).onGloballyPositioned { bounds = it.boundsInRoot() },
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        LazyRow(Modifier.weight(1f), list, horizontalArrangement = Arrangement.spacedBy(TabGap)) {
+        LazyRow(
+            Modifier.weight(1f).shiftWheelScroll(list),
+            list,
+            horizontalArrangement = Arrangement.spacedBy(TabGap),
+        ) {
             itemsIndexed(tabs.list, key = { _, tab -> System.identityHashCode(tab) }) { index, tab ->
                 val moving = dragged === tab
                 TabButton(

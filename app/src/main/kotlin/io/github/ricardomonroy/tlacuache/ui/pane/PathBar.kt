@@ -48,6 +48,7 @@ import io.github.ricardomonroy.tlacuache.R
 import io.github.ricardomonroy.tlacuache.ffi.splitForCompletion
 import io.github.ricardomonroy.tlacuache.state.PathInput
 import io.github.ricardomonroy.tlacuache.state.TabState
+import io.github.ricardomonroy.tlacuache.ui.shiftWheelScroll
 import io.github.ricardomonroy.tlacuache.ui.theme.MonoFamily
 import io.github.ricardomonroy.tlacuache.ui.theme.TlacuacheTheme
 import io.github.ricardomonroy.tlacuache.ui.theme.color
@@ -121,7 +122,7 @@ private fun Breadcrumb(
         val limit = maxWidth
         Row(verticalAlignment = Alignment.CenterVertically) {
             Row(
-                Modifier.weight(1f, fill = false).horizontalScroll(scroll),
+                Modifier.weight(1f, fill = false).shiftWheelScroll(scroll).horizontalScroll(scroll),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 for (i in 0 until ui.crumbs.lastIndex) {
