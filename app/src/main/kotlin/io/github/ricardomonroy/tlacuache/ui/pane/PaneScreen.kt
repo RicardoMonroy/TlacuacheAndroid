@@ -45,7 +45,6 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -68,7 +67,6 @@ import androidx.compose.ui.input.pointer.isForwardPressed
 import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
@@ -500,8 +498,6 @@ private fun TabScreen(
     // Tocar un control que luego desaparece (una miga) deja la ventana sin foco y los atajos dejarían de llegar.
     // Solo el panel activo lo recupera; así Tab y los toques mueven el foco al otro.
     LaunchedEffect(paneHasFocus, chrome.active) { if (chrome.active && !paneHasFocus) focus.requestFocus() }
-    // Con el foco en el panel mismo, ↑/↓ lo pasan a la lista (si no, las flechas no entran a las filas).
-    val focusManager = LocalFocusManager.current
     var paneFocused by remember { mutableStateOf(false) }
 
     Column(
@@ -524,9 +520,15 @@ private fun TabScreen(
                 }
             }.onKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
-                // Con el foco en el panel mismo, ↑/↓ entran a las filas.
+                // Con el foco en el panel mismo, ↑/↓ mueven el cursor (la selección) y Enter abre lo elegido.
                 if (paneFocused && (event.key == Key.DirectionDown || event.key == Key.DirectionUp)) {
-                    return@onKeyEvent focusManager.moveFocus(FocusDirection.Enter)
+                    tab.moveCursor(if (event.key == Key.DirectionDown) 1 else -1, event.isShiftPressed)
+                    return@onKeyEvent true
+                }
+                if (paneFocused && event.key == Key.Enter && !event.isAltPressed) {
+                    val only = ui.selection.singleOrNull() ?: return@onKeyEvent false
+                    currentAct(only, FileAction.OPEN)
+                    return@onKeyEvent true
                 }
                 val shortcut = Shortcut.of(event)
                 when {
@@ -738,6 +740,7 @@ private fun TabScreen(
                                 drag = drag,
                                 onAction = act,
                                 modifier = Modifier.fillMaxSize(),
+                                cursor = ui.cursor,
                             )
                         } else {
                             FileList(
@@ -752,6 +755,7 @@ private fun TabScreen(
                                 sort = ui.sort,
                                 onSort = tab::sortBy,
                                 modifier = Modifier.fillMaxSize(),
+                                cursor = ui.cursor,
                             )
                         }
                     }

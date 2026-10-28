@@ -155,6 +155,25 @@ class TabStateTest {
     }
 
     @Test
+    fun arrowsMoveTheCursorAndShiftExtends() {
+        listOf("a.txt", "b.txt", "c.txt").forEach { File(root, it).writeText("x") }
+        tab.reload()
+        awaitUi { !it.loading && names() == listOf("DCIM", "a.txt", "b.txt", "c.txt") }
+
+        tab.moveCursor(1, extend = false) // sin cursor: la primera
+        assertEquals(setOf("DCIM"), ui.selected)
+        tab.selectOnly("a.txt")
+        tab.moveCursor(1, extend = false)
+        assertEquals(setOf("b.txt"), ui.selected)
+        tab.moveCursor(1, extend = true)
+        tab.moveCursor(1, extend = true) // al final no pasa de la última
+        assertEquals(setOf("b.txt", "c.txt"), ui.selected)
+        assertEquals("c.txt", ui.cursor)
+        tab.moveCursor(-1, extend = true)
+        assertEquals(setOf("b.txt"), ui.selected)
+    }
+
+    @Test
     fun rereadsWhatChangedWhileNotWatching() {
         tab.startWatching()
         awaitUi { !it.loading && names() == listOf("DCIM") }

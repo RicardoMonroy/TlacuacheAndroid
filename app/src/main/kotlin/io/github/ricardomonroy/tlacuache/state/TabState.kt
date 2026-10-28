@@ -71,6 +71,8 @@ class TabState(
         val readOnly: Boolean = false,
         /** Nombres seleccionados (UI_SPEC §3); sobreviven a relecturas y se limpian al cambiar de carpeta. */
         val selected: Set<String> = emptySet(),
+        /** Cursor del teclado (↑/↓): el último elegido con clic, toque o flecha; la lista lo mantiene a la vista. */
+        val cursor: String? = null,
     ) {
         val selecting: Boolean get() = selected.isNotEmpty()
 
@@ -165,13 +167,36 @@ class TabState(
     /** Ctrl+clic, o un toque en modo selección. */
     fun toggle(name: String) {
         anchor = name
-        _ui.update { it.copy(selected = if (name in it.selected) it.selected - name else it.selected + name) }
+        _ui.update {
+            it.copy(selected = if (name in it.selected) it.selected - name else it.selected + name, cursor = name)
+        }
     }
 
     /** Clic con ratón: solo este. */
     fun selectOnly(name: String) {
         anchor = name
-        _ui.update { it.copy(selected = setOf(name)) }
+        _ui.update { it.copy(selected = setOf(name), cursor = name) }
+    }
+
+    /**
+     * ↑/↓ con teclado: selecciona la vecina del cursor ([step] = ±1), o la primera o la última si no hay
+     * cursor; con Shift ([extend]) extiende el rango desde el ancla.
+     */
+    fun moveCursor(
+        step: Int,
+        extend: Boolean,
+    ) {
+        val names = _ui.value.visible.map { it.name }
+        if (names.isEmpty()) return
+        val at = names.indexOf(_ui.value.cursor)
+        val next = names[if (at < 0) (if (step > 0) 0 else names.lastIndex) else (at + step).coerceIn(names.indices)]
+        if (extend) {
+            if (anchor !in names) anchor = names[maxOf(at, 0)]
+            selectRange(next)
+            _ui.update { it.copy(cursor = next) }
+        } else {
+            selectOnly(next)
+        }
     }
 
     /** Shift+clic: del ancla a [name] en el orden visible. */

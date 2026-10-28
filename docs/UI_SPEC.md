@@ -116,6 +116,7 @@ La app distingue el tipo de puntero de cada evento (`PointerType.Touch` / `Mouse
 | Acción | Atajo |
 |---|---|
 | Abrir / entrar | Enter, doble clic |
+| Mover el cursor (la selección) / extender | ↑ ↓ / Shift+↑ ↓ |
 | Subir nivel | Backspace, Alt+↑ |
 | Atrás / Adelante | Alt+← / Alt+→ |
 | Cambiar panel activo | Tab |

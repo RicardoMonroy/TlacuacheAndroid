@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -52,11 +53,18 @@ fun FileGrid(
     drag: ItemDrag,
     onAction: (FileEntry, FileAction) -> Unit,
     modifier: Modifier = Modifier,
+    /** Cursor del teclado: si no se ve, la cuadrícula va hasta él. */
+    cursor: String? = null,
 ) {
+    val grid = rememberLazyGridState()
+    LaunchedEffect(cursor) {
+        val i = entries.indexOfFirst { it.name == cursor }
+        if (i >= 0 && grid.layoutInfo.visibleItemsInfo.none { it.index == i }) grid.scrollToItem(i)
+    }
     LazyVerticalGrid(
         GridCells.Adaptive(CellMinWidth),
         modifier.then(gestures.trackPointer),
-        rememberLazyGridState(),
+        grid,
         contentPadding = PaddingValues(4.dp),
     ) {
         // El nombre es la identidad, como en la lista (ADR-A10).

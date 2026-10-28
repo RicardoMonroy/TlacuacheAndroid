@@ -5,6 +5,7 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
@@ -28,6 +29,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -113,6 +115,8 @@ fun FileList(
     onSort: (SortKey) -> Unit,
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(),
+    /** Cursor del teclado: se desplaza lo justo para que se vea entero. */
+    cursor: String? = null,
 ) {
     BoxWithConstraints(modifier) {
         val columns = Columns.forWidth(maxWidth)
@@ -129,6 +133,7 @@ fun FileList(
                 drag,
                 onAction,
                 contentPadding,
+                cursor,
             )
         }
     }
@@ -146,8 +151,29 @@ private fun FileRows(
     drag: ItemDrag,
     onAction: (FileEntry, FileAction) -> Unit,
     contentPadding: PaddingValues,
+    cursor: String?,
 ) {
-    LazyColumn(Modifier.fillMaxSize().then(gestures.trackPointer), rememberLazyListState(), contentPadding) {
+    val list = rememberLazyListState()
+    LaunchedEffect(cursor) {
+        val i = entries.indexOfFirst { it.name == cursor }
+        if (i < 0) return@LaunchedEffect
+        val info = list.layoutInfo
+        val item = info.visibleItemsInfo.firstOrNull { it.index == i }
+        when {
+            item == null -> {
+                list.scrollToItem(i)
+            }
+
+            item.offset < info.viewportStartOffset -> {
+                list.scrollBy((item.offset - info.viewportStartOffset).toFloat())
+            }
+
+            item.offset + item.size > info.viewportEndOffset -> {
+                list.scrollBy((item.offset + item.size - info.viewportEndOffset).toFloat())
+            }
+        }
+    }
+    LazyColumn(Modifier.fillMaxSize().then(gestures.trackPointer), list, contentPadding) {
         // El nombre es la identidad: releer la carpeta conserva desplazamiento y selección (ADR-A10).
         itemsIndexed(entries, key = { _, e -> e.name }) { index, entry ->
             FileRow(
