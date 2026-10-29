@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Generado a mano desde ../TlacuacheBrowser/branding/logo-app.svg (BRAND §2); colores de marca, no del tema. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- La cara cabe en la zona segura de 66 dp del ícono adaptativo. -->
+    <group android:scaleX="0.66" android:scaleY="0.66" android:translateX="11.76" android:translateY="10.44">
+        <path android:fillColor="#2E3440" android:pathData="M26,40 a14,14 0 1,0 28,0 a14,14 0 1,0 -28,0 Z M74,40 a14,14 0 1,0 28,0 a14,14 0 1,0 -28,0 Z" />
+        <path android:fillColor="#ECEFF4" android:strokeColor="#ECEFF4" android:strokeWidth="4" android:strokeLineJoin="round" android:pathData="M28,46 Q64,30 100,46 L70,98 Q64,106 58,98 Z" />
+        <path android:fillColor="#D8DEE9" android:pathData="M64,36 C70,36 72,46 64,62 C56,46 58,36 64,36 Z" />
+        <path android:fillColor="#2E3440" android:pathData="M46,58 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0 Z M72,58 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0 Z" />
+        <path android:fillColor="#E5A3B3" android:pathData="M57,94 a7,5.5 0 1,0 14,0 a7,5.5 0 1,0 -14,0 Z" />
+    </group>
+</vector>

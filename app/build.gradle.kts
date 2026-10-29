@@ -1,3 +1,4 @@
+import java.util.Properties
 import javax.inject.Inject
 
 plugins {
@@ -13,6 +14,15 @@ val rustAbis =
         .map { it.split(',').map(String::trim) }
         .orElse(listOf("arm64-v8a", "armeabi-v7a", "x86_64"))
 
+// Firma de la release (A5.6): la clave y sus contraseñas viven fuera del repo. Sin este archivo la release
+// sale sin firmar (F-Droid firma la suya). -Ptlacuache.signing=<ruta> usa otro.
+val signingProps =
+    file(
+        providers
+            .gradleProperty("tlacuache.signing")
+            .getOrElse("${System.getProperty("user.home")}/.config/tlacuache/signing.properties"),
+    )
+
 android {
     namespace = "io.github.ricardomonroy.tlacuache"
     compileSdk = 37
@@ -24,9 +34,29 @@ android {
         minSdk = 29
         targetSdk = 37
         versionCode = 1
-        versionName = "0.1.0-dev"
-        // Solo las ABI que compila tlacuache-ffi; JNA trae más (x86, mips…) que fallarían al cargar el core.
-        ndk { abiFilters += rustAbis.get() }
+        versionName = "0.1.0"
+    }
+
+    // Un APK por ABI, solo las que compila tlacuache-ffi: JNA trae más (x86…) que fallarían al cargar el core.
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include(*rustAbis.get().toTypedArray())
+            isUniversalApk = false
+        }
+    }
+
+    signingConfigs {
+        if (signingProps.isFile) {
+            val p = Properties().apply { signingProps.inputStream().use(::load) }
+            create("release") {
+                storeFile = file(p.getProperty("storeFile"))
+                storePassword = p.getProperty("storePassword")
+                keyAlias = p.getProperty("keyAlias")
+                keyPassword = p.getProperty("keyPassword")
+            }
+        }
     }
 
     buildTypes {
@@ -34,6 +64,7 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfigs.findByName("release")?.let { signingConfig = it }
         }
     }
 

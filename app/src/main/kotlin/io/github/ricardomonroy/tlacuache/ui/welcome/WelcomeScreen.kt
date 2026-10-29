@@ -61,7 +61,7 @@ fun WelcomeScreen(onGranted: () -> Unit) {
         verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Image(painterResource(R.mipmap.ic_launcher), contentDescription = null, Modifier.size(96.dp))
+        Image(painterResource(R.drawable.logo_app), contentDescription = null, Modifier.size(96.dp))
         Text(
             stringResource(R.string.welcome_title),
             color = colors.fg.color,
