@@ -65,6 +65,17 @@ Un gestor de archivos para Android que se sienta igual de cómodo en el teléfon
 - Arranque en frío < 800 ms en la tablet de pruebas (medir).
 - Abrir una carpeta de 10 000 archivos sin congelar la UI (listado en segundo plano + listas perezosas).
 - 60 fps al desplazar listas con miniaturas en la tablet de pruebas.
+
+Medido el 2026-10-28 (A5.5) en la tablet Lenovo TB-J706F (Android 11), build release minificada:
+
+| Medida | Resultado |
+|---|---|
+| Arranque en frío (`am start -S -W`, 10 veces) | mediana 530 ms (500–700 ms; un caso de 1.9 s) |
+| Memoria en reposo (PSS) | 107 MB |
+| Memoria con 1000 miniaturas vistas (PSS) | 212 MB (141 MB de gráficos) |
+| Lista de 1000 archivos | 2.2 % de cuadros tarde; p90 12 ms, p95 14 ms |
+| Cuadrícula de miniaturas, primera pasada (decodificando) | 7.7 % tarde; p90 15 ms, p95 18 ms |
+| Cuadrícula de miniaturas, ya en caché | 2.3 % tarde; p90 12 ms, p95 15 ms |
 - Ninguna pérdida de datos: copias verificadas por tamaño, mover entre volúmenes = copiar + borrar solo si la copia terminó.
 - Funcionar en teléfono, tablet, plegable y modo escritorio, en vertical y horizontal, y al redimensionar la ventana sin perder el estado.
 - APK sin dependencias propietarias; permisos solo los imprescindibles (almacenamiento, notificaciones, servicio en primer plano).
